@@ -139,6 +139,45 @@
   /* Export button */
   .export-btn{background:transparent;border:1px solid #26262f;color:#9ca3af;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px}
   .export-btn:active{background:#1f1f2a;color:#f7931a}
+  .io-btns{display:flex;gap:6px}
+
+  /* Power law deviation badge */
+  .pl-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:0.02em}
+  .pl-badge.below{background:rgba(63,185,80,0.12);color:#3fb950}
+  .pl-badge.above{background:rgba(248,81,73,0.12);color:#f85149}
+  .pl-badge.fair{background:rgba(247,147,26,0.12);color:#f7931a}
+
+  /* Days since last buy */
+  .last-buy-strip{background:#101019;border:1px solid #1f1f2a;border-radius:10px;padding:8px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;font-size:11px}
+  .last-buy-strip span{color:#9ca3af;letter-spacing:0.04em}
+  .last-buy-strip strong{color:#f7931a;font-weight:700;font-variant-numeric:tabular-nums}
+
+  /* Yearly summary */
+  .yearly-card{background:#101019;border:1px solid #1f1f2a;border-radius:14px;padding:0;margin-bottom:14px;overflow:hidden}
+  .yearly-head{padding:14px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+  .yearly-head .chev{color:#6b7280;transition:transform 0.2s;font-size:11px}
+  .yearly-card.open .chev{transform:rotate(180deg)}
+  .yearly-body{display:none;border-top:1px solid #1f1f2a}
+  .yearly-card.open .yearly-body{display:block}
+  .yearly-row{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:8px;padding:11px 16px;border-bottom:1px solid #16161f;font-size:12px;align-items:center}
+  .yearly-row:last-child{border-bottom:none}
+  .yearly-row.header{background:#0a0a0f;font-size:10px;color:#6b7280;letter-spacing:0.06em;text-transform:uppercase;font-weight:600}
+  .yr-year{color:#f7931a;font-weight:700;font-variant-numeric:tabular-nums}
+  .yr-val{color:#e8e8ed;font-variant-numeric:tabular-nums;text-align:right}
+  .yr-val.sub{color:#9ca3af;font-size:11px}
+  .yr-btc{color:#f7931a;font-variant-numeric:tabular-nums;text-align:right;font-size:11px}
+
+  /* Edit indicator on history rows */
+  .history-item{cursor:pointer;transition:background 0.15s}
+  .history-item:active{background:#16161f}
+  .history-item.editing{background:rgba(247,147,26,0.06);border-left:3px solid #f7931a}
+
+  /* Form title — editing variant */
+  .add-form.editing{border-color:#3fb950}
+  .add-form.editing .form-title{color:#3fb950}
+
+  /* Hidden file input */
+  .file-input-hidden{display:none}
 </style>
 </head>
 <body>
@@ -192,6 +231,11 @@
     <div class="pnl-label">Return</div>
     <div class="pnl-pct" id="pnlPct">—</div>
   </div>
+</div>
+
+<div class="last-buy-strip" id="lastBuyStrip" style="display:none">
+  <span>LAST BUY <strong id="daysSince">—</strong> DAYS AGO</span>
+  <span id="streakInfo"></span>
 </div>
 
 <div class="chart-card">
@@ -264,7 +308,7 @@
 <button class="add-btn" id="addBtn" onclick="toggleForm()">+ Add Purchase</button>
 
 <div class="add-form" id="addForm">
-  <div class="form-title">New Purchase</div>
+  <div class="form-title" id="formTitle">New Purchase</div>
   <div class="form-row">
     <label>Date</label>
     <input type="date" id="formDate">
@@ -284,15 +328,26 @@
   </div>
   <div class="form-actions">
     <button class="btn-cancel" onclick="toggleForm()">Cancel</button>
-    <button class="btn-save" onclick="savePurchase()">Save Purchase</button>
+    <button class="btn-save" id="formSaveBtn" onclick="savePurchase()">Save Purchase</button>
   </div>
+</div>
+
+<div class="yearly-card" id="yearlyCard">
+  <div class="yearly-head" onclick="toggleYearly()">
+    <div class="proj-title">Yearly Summary</div>
+    <span class="chev">▼</span>
+  </div>
+  <div class="yearly-body" id="yearlyBody"></div>
 </div>
 
 <div class="history-card">
   <div class="history-header">
     <div class="history-title">Purchase History</div>
     <div style="display:flex;align-items:center;gap:10px">
-      <button class="export-btn" onclick="exportCSV()">⤓ CSV</button>
+      <div class="io-btns">
+        <button class="export-btn" onclick="document.getElementById('csvImport').click()">⤴ Import</button>
+        <button class="export-btn" onclick="exportCSV()">⤓ Export</button>
+      </div>
       <div class="history-count" id="histCount"></div>
     </div>
   </div>
@@ -302,6 +357,8 @@
 <div class="footer">DATA STORED LOCALLY ON THIS DEVICE</div>
 
 <div class="toast" id="toast"></div>
+
+<input type="file" id="csvImport" accept=".csv,text/csv" class="file-input-hidden" onchange="handleImport(event)">
 
 <script>
 const SEED_DATA = [
@@ -391,7 +448,8 @@ let liveUsdPrice = null;
 let chart = null;
 let currentChartType = "pnl";
 let pendingDeleteId = null;
-let projYear = null; // will be set after page load
+let projYear = null;
+let editingId = null;
 
 function loadPurchases() {
   try {
@@ -485,9 +543,35 @@ function render() {
     const diff = ((livePrice - s.dcaAvg) / s.dcaAvg) * 100;
     const cls = diff >= 0 ? "positive" : "negative";
     const arrow = diff >= 0 ? "▲" : "▼";
-    meta.innerHTML = `<span>vs your avg ${fmtGBP(s.dcaAvg, 0)}</span><span class="${cls}">${arrow} ${Math.abs(diff).toFixed(1)}%</span>`;
+    let html = `<span>vs your avg ${fmtGBP(s.dcaAvg, 0)}</span><span class="${cls}">${arrow} ${Math.abs(diff).toFixed(1)}%</span>`;
+    // Power law deviation
+    const plGbp = powerLawGBP(Date.now());
+    if (plGbp > 0) {
+      const plDev = ((livePrice - plGbp) / plGbp) * 100;
+      let badgeCls, badgeText;
+      if (plDev < -15) { badgeCls = "below"; badgeText = `${Math.abs(plDev).toFixed(0)}% below trend`; }
+      else if (plDev > 15) { badgeCls = "above"; badgeText = `${plDev.toFixed(0)}% above trend`; }
+      else { badgeCls = "fair"; badgeText = "near trend"; }
+      html += `<span class="pl-badge ${badgeCls}">${badgeText}</span>`;
+    }
+    meta.innerHTML = html;
   } else {
     meta.innerHTML = "";
+  }
+
+  // Days since last buy
+  const lastBuyStrip = document.getElementById("lastBuyStrip");
+  if (purchases.length > 0) {
+    const lastDate = [...purchases].sort((a, b) => b.date.localeCompare(a.date))[0].date;
+    const daysSince = Math.floor((Date.now() - new Date(lastDate).getTime()) / 86400000);
+    document.getElementById("daysSince").textContent = daysSince;
+    const streak = document.getElementById("streakInfo");
+    if (daysSince <= 7) streak.innerHTML = '<span style="color:#3fb950">● ON TRACK</span>';
+    else if (daysSince <= 10) streak.innerHTML = '<span style="color:#f7931a">● DUE</span>';
+    else streak.innerHTML = '<span style="color:#f85149">● OVERDUE</span>';
+    lastBuyStrip.style.display = "flex";
+  } else {
+    lastBuyStrip.style.display = "none";
   }
 
   // Stats
@@ -516,6 +600,7 @@ function render() {
   renderHistory();
   renderChart();
   renderProjection();
+  renderYearly();
 }
 
 function renderHistory() {
@@ -532,8 +617,9 @@ function renderHistory() {
     const d = new Date(p.date);
     const dateStr = d.toLocaleDateString("en-GB", {day:"2-digit", month:"short", year:"numeric"});
     const isPending = pendingDeleteId === p.id;
+    const isEditing = editingId === p.id;
     return `
-      <div class="history-item">
+      <div class="history-item${isEditing ? ' editing' : ''}" onclick="if(event.target.closest('button'))return; editPurchase(${p.id})">
         <div>
           <div class="h-date">${dateStr}</div>
           <div class="h-price">@ ${fmtGBP(p.price, 0)}</div>
@@ -601,18 +687,20 @@ function renderChart() {
       {label:"Current Value", data: valueSeries, borderColor:"#f7931a", backgroundColor:"rgba(247,147,26,0.12)", borderWidth:2.5, pointRadius:0, tension:0.2, fill:true}
     ];
   } else {
-    sub = "BTC market price vs your running DCA average";
+    sub = "BTC price · DCA average · power law trend";
     let cumCost = 0, cumBtc = 0;
-    const buyPriceSeries = [], dcaSeries = [];
+    const buyPriceSeries = [], dcaSeries = [], plSeries = [];
     sorted.forEach(p => {
       cumCost += p.cost;
       cumBtc += p.btc;
       buyPriceSeries.push(p.price);
       dcaSeries.push(cumCost / cumBtc);
+      plSeries.push(powerLawGBP(new Date(p.date).getTime()));
     });
     datasets = [
       {label:"Buy Price", data: buyPriceSeries, borderColor:"#8b949e", borderWidth:1.5, pointRadius:0, tension:0.2, fill:false},
-      {label:"Your DCA Avg", data: dcaSeries, borderColor:"#f7931a", borderWidth:2.5, pointRadius:0, tension:0.2, fill:false}
+      {label:"Your DCA Avg", data: dcaSeries, borderColor:"#f7931a", borderWidth:2.5, pointRadius:0, tension:0.2, fill:false},
+      {label:"Power Law Trend", data: plSeries, borderColor:"#6b46c1", borderWidth:1.5, borderDash:[3,3], pointRadius:0, tension:0.2, fill:false}
     ];
     if (livePrice) {
       datasets.push({label:"Live Price", data: new Array(sorted.length).fill(livePrice), borderColor:"#3fb950", borderWidth:1.5, borderDash:[4,4], pointRadius:0, fill:false});
@@ -669,15 +757,41 @@ function toggleForm() {
   const btn = document.getElementById("addBtn");
   const open = !form.classList.contains("show");
   form.classList.toggle("show", open);
+  form.classList.remove("editing");
+  document.getElementById("formTitle").textContent = "New Purchase";
+  document.getElementById("formSaveBtn").textContent = "Save Purchase";
   btn.style.display = open ? "none" : "block";
   if (open) {
+    editingId = null;
     document.getElementById("formDate").value = new Date().toISOString().split("T")[0];
     document.getElementById("formCost").value = "25";
     document.getElementById("formPrice").value = livePrice ? livePrice.toFixed(2) : "";
     document.getElementById("formBtc").value = "";
     updateAutoBtc();
     setTimeout(() => document.getElementById("formPrice").focus(), 100);
+  } else {
+    editingId = null;
+    renderHistory();
   }
+}
+
+function editPurchase(id) {
+  const p = purchases.find(x => x.id === id);
+  if (!p) return;
+  editingId = id;
+  const form = document.getElementById("addForm");
+  const btn = document.getElementById("addBtn");
+  form.classList.add("show", "editing");
+  btn.style.display = "none";
+  document.getElementById("formTitle").textContent = "Edit Purchase";
+  document.getElementById("formSaveBtn").textContent = "Save Changes";
+  document.getElementById("formDate").value = p.date;
+  document.getElementById("formCost").value = p.cost;
+  document.getElementById("formPrice").value = p.price;
+  document.getElementById("formBtc").value = p.btc.toFixed(8);
+  renderHistory();
+  // Scroll to form
+  setTimeout(() => form.scrollIntoView({behavior:"smooth", block:"center"}), 50);
 }
 
 function updateAutoBtc() {
@@ -700,11 +814,20 @@ function savePurchase() {
   if (!price || price <= 0) return showToast("Please enter a valid price");
 
   const btc = cost / price;
-  purchases.push({id: Date.now(), date, cost, btc, price});
+  if (editingId !== null) {
+    // Update existing
+    const idx = purchases.findIndex(x => x.id === editingId);
+    if (idx !== -1) {
+      purchases[idx] = {...purchases[idx], date, cost, btc, price};
+    }
+    showToast("Purchase updated");
+  } else {
+    purchases.push({id: Date.now(), date, cost, btc, price});
+    showToast("Purchase added");
+  }
   savePurchases();
   toggleForm();
   render();
-  showToast("Purchase added");
 }
 
 // ── POWER LAW PROJECTION ─────────────────────────────
@@ -722,6 +845,10 @@ function powerLawUSD(dateMs) {
   const days = (dateMs - GENESIS_MS) / 86400000;
   if (days <= 0) return 0;
   return Math.pow(10, PL_A + PL_B * Math.log10(days));
+}
+
+function powerLawGBP(dateMs) {
+  return powerLawUSD(dateMs) * getUsdGbpRate();
 }
 
 function getUsdGbpRate() {
@@ -807,6 +934,128 @@ function exportCSV() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   showToast("CSV downloaded");
+}
+
+// ── YEARLY SUMMARY ─────────────────────────────
+function renderYearly() {
+  const body = document.getElementById("yearlyBody");
+  if (purchases.length === 0) {
+    body.innerHTML = '<div class="empty">No data yet</div>';
+    return;
+  }
+  const byYear = {};
+  purchases.forEach(p => {
+    const y = p.date.slice(0, 4);
+    if (!byYear[y]) byYear[y] = {cost: 0, btc: 0, count: 0};
+    byYear[y].cost += p.cost;
+    byYear[y].btc += p.btc;
+    byYear[y].count += 1;
+  });
+  const years = Object.keys(byYear).sort((a, b) => b.localeCompare(a));
+  let html = `<div class="yearly-row header">
+    <span>Year</span>
+    <span class="yr-val">Invested</span>
+    <span class="yr-val">BTC</span>
+    <span class="yr-val">Avg £</span>
+  </div>`;
+  years.forEach(y => {
+    const d = byYear[y];
+    const avg = d.cost / d.btc;
+    html += `<div class="yearly-row">
+      <span class="yr-year">${y}</span>
+      <span class="yr-val">${fmtGBP(d.cost, 0)}<div class="yr-val sub" style="text-align:right">${d.count} buys</div></span>
+      <span class="yr-btc">${d.btc.toFixed(6)}</span>
+      <span class="yr-val">${fmtGBP(avg, 0)}</span>
+    </div>`;
+  });
+  body.innerHTML = html;
+}
+
+function toggleYearly() {
+  document.getElementById("yearlyCard").classList.toggle("open");
+}
+
+// ── CSV IMPORT ─────────────────────────────
+function handleImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const text = e.target.result;
+      const parsed = parseImportedCSV(text);
+      if (parsed.length === 0) {
+        showToast("No valid rows found in CSV");
+        return;
+      }
+      const confirmMsg = `Replace your ${purchases.length} purchases with ${parsed.length} imported entries?`;
+      if (confirm(confirmMsg)) {
+        purchases = parsed.map((p, i) => ({...p, id: Date.now() + i}));
+        savePurchases();
+        render();
+        showToast(`Imported ${parsed.length} purchases`);
+      }
+    } catch(err) {
+      showToast("CSV parse error — check format");
+      console.error(err);
+    }
+    event.target.value = ""; // reset so re-selecting same file works
+  };
+  reader.readAsText(file);
+}
+
+function parseImportedCSV(text) {
+  // Tolerant parser: handles our own export format AND the user's original
+  // messy format (£ symbols, commas in numbers, etc.)
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  const out = [];
+  for (const line of lines) {
+    // Split respecting quotes
+    const cells = [];
+    let cur = "", inQ = false;
+    for (const ch of line) {
+      if (ch === '"') inQ = !inQ;
+      else if (ch === "," && !inQ) { cells.push(cur); cur = ""; }
+      else cur += ch;
+    }
+    cells.push(cur);
+    // Skip header rows and obviously non-data rows
+    const cleaned = cells.map(c => c.trim());
+    // Try to find a row with: something looking like a date, then 3 numbers
+    let dateIdx = -1;
+    for (let i = 0; i < cleaned.length; i++) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned[i]) || /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(cleaned[i])) {
+        dateIdx = i;
+        break;
+      }
+    }
+    if (dateIdx === -1) continue;
+    // Parse remaining numeric fields, stripping £, commas
+    const nums = [];
+    for (let i = dateIdx + 1; i < cleaned.length && nums.length < 3; i++) {
+      const raw = cleaned[i].replace(/[£$,\s]/g, "");
+      const n = parseFloat(raw);
+      if (!isNaN(n) && n > 0) nums.push(n);
+    }
+    if (nums.length < 3) continue;
+    // Normalise date
+    let date = cleaned[dateIdx];
+    if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(date)) {
+      const parts = date.split(/[\/\-]/);
+      let yr = parts[2];
+      if (yr.length === 2) yr = "20" + yr;
+      date = `${yr}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+    }
+    // Use magnitude to identify: BTC amount is always the smallest (< 1),
+    // BTC price is always the largest (> 1000), cost is what's left
+    const sorted3 = [...nums].sort((a, b) => a - b);
+    const btc = sorted3[0];
+    const price = sorted3[2];
+    const cost = sorted3[1];
+    if (btc >= 1 || price < 100 || cost <= 0) continue;
+    out.push({date, cost, btc, price});
+  }
+  return out;
 }
 
 // Init
