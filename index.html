@@ -100,6 +100,45 @@
   .confirm-row{display:flex;gap:8px}
   .confirm-yes{background:#f85149;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer}
   .confirm-no{background:transparent;border:1px solid #26262f;color:#9ca3af;padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer}
+
+  /* Projection card */
+  .proj-card{background:#101019;border:1px solid #1f1f2a;border-radius:14px;padding:16px;margin-bottom:14px}
+  .proj-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:8px}
+  .proj-title{font-size:11px;color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase;font-weight:600}
+  .proj-info{font-size:14px;color:#6b7280;cursor:pointer;line-height:1;padding:2px 6px}
+  .proj-info:active{color:#f7931a}
+  .year-tabs{display:flex;gap:4px;background:#0a0a0f;border-radius:8px;padding:3px;margin-bottom:14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .year-tab{flex:1;min-width:55px;padding:8px 4px;background:transparent;border:none;color:#6b7280;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px;transition:all 0.2s;font-variant-numeric:tabular-nums}
+  .year-tab.active{background:#1f1f2a;color:#f7931a}
+  .scenario{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:11px 12px;border-radius:10px;margin-bottom:6px;background:#0a0a0f}
+  .scenario:last-child{margin-bottom:0}
+  .scenario-tag{font-size:9px;font-weight:700;padding:3px 7px;border-radius:4px;letter-spacing:0.06em;text-transform:uppercase}
+  .scenario.bear .scenario-tag{background:rgba(248,81,73,0.15);color:#f85149}
+  .scenario.base .scenario-tag{background:rgba(247,147,26,0.15);color:#f7931a}
+  .scenario.bull .scenario-tag{background:rgba(63,185,80,0.15);color:#3fb950}
+  .scenario-price{font-size:13px;color:#9ca3af;font-variant-numeric:tabular-nums}
+  .scenario-stack{font-size:15px;font-weight:700;color:#e8e8ed;font-variant-numeric:tabular-nums;text-align:right}
+  .proj-disclaimer{font-size:10px;color:#6b7280;font-style:italic;margin-top:10px;line-height:1.5}
+  .proj-info-box{background:#0a0a0f;border:1px solid #26262f;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:11px;color:#9ca3af;line-height:1.6;display:none}
+  .proj-info-box.show{display:block}
+  .proj-info-box strong{color:#f7931a}
+
+  /* Future stack subsection */
+  .future-stack{margin-top:14px;padding-top:14px;border-top:1px solid #1f1f2a}
+  .future-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  .future-row label{font-size:11px;color:#9ca3af;flex:1;min-width:0}
+  .future-row input{background:#0a0a0f;border:1px solid #26262f;color:#e8e8ed;padding:6px 10px;border-radius:6px;font-size:13px;width:80px;font-family:inherit;outline:none;font-variant-numeric:tabular-nums;text-align:right}
+  .future-row input:focus{border-color:#f7931a}
+  .future-result{background:linear-gradient(135deg,rgba(247,147,26,0.08),transparent);border-radius:10px;padding:12px;margin-top:8px}
+  .future-result-line{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px}
+  .future-result-line.total{margin-top:6px;padding-top:8px;border-top:1px solid rgba(247,147,26,0.15);font-weight:700;font-size:14px}
+  .future-label{color:#9ca3af}
+  .future-value{color:#e8e8ed;font-variant-numeric:tabular-nums;font-weight:600}
+  .future-value.highlight{color:#f7931a}
+
+  /* Export button */
+  .export-btn{background:transparent;border:1px solid #26262f;color:#9ca3af;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .export-btn:active{background:#1f1f2a;color:#f7931a}
 </style>
 </head>
 <body>
@@ -169,6 +208,59 @@
   </div>
 </div>
 
+<div class="proj-card">
+  <div class="proj-head">
+    <div>
+      <div class="proj-title">Power Law Projection</div>
+    </div>
+    <span class="proj-info" onclick="toggleProjInfo()">ⓘ</span>
+  </div>
+  <div class="proj-info-box" id="projInfoBox">
+    The <strong>Bitcoin Power Law</strong> (Santostasi/Burger) models BTC's long-term price as a power function of time. Historically it has roughly bounded BTC's price corridor — but it's a heuristic, not a guarantee. The model could break. Use this as a thought exercise, not a forecast.
+  </div>
+  <div class="year-tabs" id="yearTabs"></div>
+
+  <div class="scenario bear">
+    <span class="scenario-tag">Bear</span>
+    <span class="scenario-price" id="bearPrice">—</span>
+    <span class="scenario-stack" id="bearStack">—</span>
+  </div>
+  <div class="scenario base">
+    <span class="scenario-tag">Base</span>
+    <span class="scenario-price" id="basePrice">—</span>
+    <span class="scenario-stack" id="baseStack">—</span>
+  </div>
+  <div class="scenario bull">
+    <span class="scenario-tag">Bull</span>
+    <span class="scenario-price" id="bullPrice">—</span>
+    <span class="scenario-stack" id="bullStack">—</span>
+  </div>
+
+  <div class="future-stack">
+    <div class="proj-title" style="margin-bottom:10px">If You Keep Buying</div>
+    <div class="future-row">
+      <label>Weekly buy (£)</label>
+      <input type="number" id="futureWeekly" value="25" min="0" step="1" inputmode="decimal">
+    </div>
+    <div class="future-result">
+      <div class="future-result-line">
+        <span class="future-label">Extra £ invested by then</span>
+        <span class="future-value" id="futureInvested">—</span>
+      </div>
+      <div class="future-result-line">
+        <span class="future-label">Extra BTC accumulated</span>
+        <span class="future-value highlight" id="futureBtc">—</span>
+      </div>
+      <div class="future-result-line total">
+        <span class="future-label">Projected stack value (base)</span>
+        <span class="future-value highlight" id="futureStack">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="proj-disclaimer">Model uses central trend, support, and resistance bands. Not financial advice.</div>
+</div>
+
 <button class="add-btn" id="addBtn" onclick="toggleForm()">+ Add Purchase</button>
 
 <div class="add-form" id="addForm">
@@ -199,7 +291,10 @@
 <div class="history-card">
   <div class="history-header">
     <div class="history-title">Purchase History</div>
-    <div class="history-count" id="histCount"></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="export-btn" onclick="exportCSV()">⤓ CSV</button>
+      <div class="history-count" id="histCount"></div>
+    </div>
   </div>
   <div class="history-list" id="histList"></div>
 </div>
@@ -292,9 +387,11 @@ const PRICE_CACHE_KEY = "btc_stack_price_v1";
 
 let purchases = [];
 let livePrice = null;
+let liveUsdPrice = null;
 let chart = null;
 let currentChartType = "pnl";
 let pendingDeleteId = null;
+let projYear = null; // will be set after page load
 
 function loadPurchases() {
   try {
@@ -344,17 +441,19 @@ async function fetchPrice(manual = false) {
       const cached = JSON.parse(localStorage.getItem(PRICE_CACHE_KEY));
       if (cached && Date.now() - cached.ts < 5 * 60 * 1000) {
         livePrice = cached.price;
+        liveUsdPrice = cached.usd || null;
         render();
       }
     } catch(e) {}
   }
 
   try {
-    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=gbp");
+    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=gbp,usd");
     const data = await res.json();
     if (data?.bitcoin?.gbp) {
       livePrice = data.bitcoin.gbp;
-      localStorage.setItem(PRICE_CACHE_KEY, JSON.stringify({price: livePrice, ts: Date.now()}));
+      liveUsdPrice = data.bitcoin.usd || null;
+      localStorage.setItem(PRICE_CACHE_KEY, JSON.stringify({price: livePrice, usd: liveUsdPrice, ts: Date.now()}));
       document.getElementById("lastUpdated").textContent = "Updated " + new Date().toLocaleTimeString("en-GB", {hour:"2-digit", minute:"2-digit"});
       if (manual) showToast("Price updated");
     }
@@ -416,6 +515,7 @@ function render() {
 
   renderHistory();
   renderChart();
+  renderProjection();
 }
 
 function renderHistory() {
@@ -607,10 +707,114 @@ function savePurchase() {
   showToast("Purchase added");
 }
 
+// ── POWER LAW PROJECTION ─────────────────────────────
+// Santostasi/Burger Bitcoin Power Law (2024 calibration)
+// log10(price_usd) = a + b * log10(days since genesis)
+const GENESIS_MS = new Date("2009-01-03").getTime();
+const PL_A = -17.351;
+const PL_B = 5.83;
+
+// Support / resistance multipliers around the central trend (approximate historic bands)
+const BEAR_MULT = 0.42;
+const BULL_MULT = 3.0;
+
+function powerLawUSD(dateMs) {
+  const days = (dateMs - GENESIS_MS) / 86400000;
+  if (days <= 0) return 0;
+  return Math.pow(10, PL_A + PL_B * Math.log10(days));
+}
+
+function getUsdGbpRate() {
+  // Derive from live prices when available; fallback to ~0.78
+  if (livePrice && liveUsdPrice) return livePrice / liveUsdPrice;
+  return 0.78;
+}
+
+function initYearTabs() {
+  const tabs = document.getElementById("yearTabs");
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear + 1, currentYear + 3, currentYear + 5, currentYear + 9, currentYear + 14];
+  projYear = years[2]; // default to +5yr
+  tabs.innerHTML = years.map(y =>
+    `<button class="year-tab${y === projYear ? " active" : ""}" data-year="${y}" onclick="setProjYear(${y})">${y}</button>`
+  ).join("");
+}
+
+function setProjYear(y) {
+  projYear = y;
+  document.querySelectorAll(".year-tab").forEach(t => t.classList.toggle("active", parseInt(t.dataset.year) === y));
+  renderProjection();
+}
+
+function toggleProjInfo() {
+  document.getElementById("projInfoBox").classList.toggle("show");
+}
+
+function renderProjection() {
+  if (!projYear) return;
+  const s = computeStats();
+  const targetDate = new Date(projYear, 5, 30).getTime(); // mid-year
+  const centralUsd = powerLawUSD(targetDate);
+  const rate = getUsdGbpRate();
+  const centralGbp = centralUsd * rate;
+  const bearGbp = centralGbp * BEAR_MULT;
+  const bullGbp = centralGbp * BULL_MULT;
+
+  document.getElementById("bearPrice").textContent = fmtGBP(bearGbp, 0);
+  document.getElementById("basePrice").textContent = fmtGBP(centralGbp, 0);
+  document.getElementById("bullPrice").textContent = fmtGBP(bullGbp, 0);
+
+  document.getElementById("bearStack").textContent = fmtGBP(bearGbp * s.totalBtc, 0);
+  document.getElementById("baseStack").textContent = fmtGBP(centralGbp * s.totalBtc, 0);
+  document.getElementById("bullStack").textContent = fmtGBP(bullGbp * s.totalBtc, 0);
+
+  // Future stack: if you keep DCA'ing weekly until projYear
+  const weekly = parseFloat(document.getElementById("futureWeekly").value) || 0;
+  const now = Date.now();
+  const weeksAhead = Math.max(0, Math.floor((targetDate - now) / (7 * 86400000)));
+  const futureInvested = weekly * weeksAhead;
+
+  // Estimate avg BTC price between now and target using power law midpoint
+  // For each week, accumulate cost / projected price. Use simple midpoint approximation.
+  let futureBtc = 0;
+  for (let w = 1; w <= weeksAhead; w++) {
+    const wDate = now + w * 7 * 86400000;
+    const priceGbpAtBuy = powerLawUSD(wDate) * rate;
+    if (priceGbpAtBuy > 0) futureBtc += weekly / priceGbpAtBuy;
+  }
+
+  const totalFutureBtc = s.totalBtc + futureBtc;
+  const futureStackValue = totalFutureBtc * centralGbp;
+
+  document.getElementById("futureInvested").textContent = fmtGBP(futureInvested, 0);
+  document.getElementById("futureBtc").textContent = "₿ " + futureBtc.toFixed(6);
+  document.getElementById("futureStack").textContent = fmtGBP(futureStackValue, 0);
+}
+
+// ── CSV EXPORT ─────────────────────────────
+function exportCSV() {
+  const sorted = [...purchases].sort((a, b) => a.date.localeCompare(b.date));
+  const rows = [["Date", "Cost (GBP)", "BTC Amount", "BTC Price (GBP)"]];
+  sorted.forEach(p => rows.push([p.date, p.cost.toFixed(2), p.btc.toFixed(8), p.price.toFixed(2)]));
+  const csv = rows.map(r => r.join(",")).join("\n");
+  const blob = new Blob([csv], {type: "text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `btc_purchases_${new Date().toISOString().split("T")[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("CSV downloaded");
+}
+
 // Init
 document.getElementById("formCost").addEventListener("input", updateAutoBtc);
 document.getElementById("formPrice").addEventListener("input", updateAutoBtc);
+document.getElementById("futureWeekly").addEventListener("input", renderProjection);
 
+initYearTabs();
 loadPurchases();
 render();
 fetchPrice();
