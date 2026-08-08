@@ -11,6 +11,8 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23f7931a'/%3E%3Ctext x='16' y='24' font-family='Arial' font-size='22' font-weight='bold' text-anchor='middle' fill='white'%3E%E2%82%BF%3C/text%3E%3C/svg%3E">
 <title>BTC Stack</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js"></script>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{background:#0a0a0f;color:#e8e8ed;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow-x:hidden}
@@ -75,7 +77,7 @@
   .auto-calc-note{font-size:11px;color:#6b7280;font-style:italic;margin-top:-6px;margin-bottom:10px}
 
   .history-card{background:#101019;border:1px solid #1f1f2a;border-radius:14px;overflow:hidden;margin-bottom:30px}
-  .history-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #1f1f2a}
+  .history-header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid #1f1f2a}
   .history-title{font-size:11px;color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase;font-weight:600}
   .history-count{font-size:11px;color:#6b7280}
   .history-list{max-height:400px;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -137,9 +139,9 @@
   .future-value.highlight{color:#f7931a}
 
   /* Export button */
-  .export-btn{background:transparent;border:1px solid #26262f;color:#9ca3af;font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .export-btn{background:transparent;border:1px solid #26262f;color:#9ca3af;font-size:11px;padding:7px 10px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
   .export-btn:active{background:#1f1f2a;color:#f7931a}
-  .io-btns{display:flex;gap:6px}
+  .io-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 
   /* Power law deviation badge */
   .pl-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:0.02em}
@@ -151,6 +153,14 @@
   .last-buy-strip{background:#101019;border:1px solid #1f1f2a;border-radius:10px;padding:8px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;font-size:11px}
   .last-buy-strip span{color:#9ca3af;letter-spacing:0.04em}
   .last-buy-strip strong{color:#f7931a;font-weight:700;font-variant-numeric:tabular-nums}
+
+  /* DCA efficiency strip */
+  .dca-strip{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+  .dca-cell{background:#101019;border:1px solid #1f1f2a;border-radius:12px;padding:11px 12px;text-align:center}
+  .dca-k{font-size:9px;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;font-weight:600}
+  .dca-v{font-size:15px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums;color:#e8e8ed}
+  .dca-v.pos{color:#3fb950}
+  .dca-v.neg{color:#f85149}
 
   /* Yearly summary */
   .yearly-card{background:#101019;border:1px solid #1f1f2a;border-radius:14px;padding:0;margin-bottom:14px;overflow:hidden}
@@ -238,13 +248,29 @@
   <span id="streakInfo"></span>
 </div>
 
+<div class="dca-strip" id="dcaStrip" style="display:none">
+  <div class="dca-cell">
+    <div class="dca-k">Sats / £ (lifetime)</div>
+    <div class="dca-v" id="satsPerGbp">—</div>
+  </div>
+  <div class="dca-cell">
+    <div class="dca-k">Last 4 buys avg</div>
+    <div class="dca-v" id="satsRecent">—</div>
+  </div>
+  <div class="dca-cell">
+    <div class="dca-k">Buying vs avg</div>
+    <div class="dca-v" id="buyingEff">—</div>
+  </div>
+</div>
+
 <div class="chart-card">
   <div class="chart-title">
     <span>Performance</span>
   </div>
   <div class="chart-tabs">
-    <button class="chart-tab active" data-chart="pnl" onclick="switchChart('pnl')">P&L Over Time</button>
-    <button class="chart-tab" data-chart="price" onclick="switchChart('price')">Price vs DCA</button>
+    <button class="chart-tab active" data-chart="value" onclick="switchChart('value')">Value</button>
+    <button class="chart-tab" data-chart="buys" onclick="switchChart('buys')">Buys</button>
+    <button class="chart-tab" data-chart="dca" onclick="switchChart('dca')">Price vs DCA</button>
   </div>
   <div class="chart-sub" id="chartSub">Portfolio value vs cost basis</div>
   <div class="chart-wrap">
@@ -346,7 +372,9 @@
     <div style="display:flex;align-items:center;gap:10px">
       <div class="io-btns">
         <button class="export-btn" onclick="document.getElementById('csvImport').click()">⤴ Import</button>
-        <button class="export-btn" onclick="exportCSV()">⤓ Export</button>
+        <button class="export-btn" onclick="exportCSV()">⤓ CSV</button>
+        <button class="export-btn" onclick="exportBackup()">⤓ Backup</button>
+        <button class="export-btn" onclick="restoreBackup()">↺ Restore</button>
       </div>
       <div class="history-count" id="histCount"></div>
     </div>
@@ -358,7 +386,7 @@
 
 <div class="toast" id="toast"></div>
 
-<input type="file" id="csvImport" accept=".csv,text/csv" class="file-input-hidden" onchange="handleImport(event)">
+<input type="file" id="csvImport" accept=".csv,.json,text/csv,application/json" class="file-input-hidden" onchange="handleImport(event)">
 
 <script>
 const SEED_DATA = [
@@ -436,17 +464,22 @@ const SEED_DATA = [
   {date:"2026-05-27",cost:25,btc:0.00051601,price:47830.38},
   {date:"2026-06-03",cost:25,btc:0.00052276,price:47213.67},
   {date:"2026-06-10",cost:25,btc:0.00051534,price:47983.82},
-  {date:"2026-06-17",cost:25,btc:0.00052940,price:46618.81}
+  {date:"2026-06-17",cost:25,btc:0.00052940,price:46618.81},
+  {date:"2026-07-02",cost:25,btc:0.00054707,price:45296.69},
+  {date:"2026-07-09",cost:25,btc:0.00052989,price:46764.42},
+  {date:"2026-08-06",cost:50,btc:0.00103393,price:47934.54},
 ];
 
 const STORAGE_KEY = "btc_stack_purchases_v1";
 const PRICE_CACHE_KEY = "btc_stack_price_v1";
+const BACKUP_KEY = "btc_stack_backup_v1";      // rolling safety snapshot before any destructive write
+const RATE_CACHE_KEY = "btc_stack_usdgbp_v1";  // last known USD→GBP rate
 
 let purchases = [];
 let livePrice = null;
 let liveUsdPrice = null;
 let chart = null;
-let currentChartType = "pnl";
+let currentChartType = "value";
 let pendingDeleteId = null;
 let projYear = null;
 let editingId = null;
@@ -465,12 +498,63 @@ function loadPurchases() {
   }
 }
 
-function savePurchases() {
+function savePurchases(snapshotFirst = false) {
   try {
+    // Before any risky write (import/delete), stash the current state so it's recoverable.
+    if (snapshotFirst) {
+      const existing = localStorage.getItem(STORAGE_KEY);
+      if (existing) {
+        localStorage.setItem(BACKUP_KEY, JSON.stringify({
+          data: existing,
+          savedAt: Date.now()
+        }));
+      }
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(purchases));
   } catch(e) {
     showToast("Storage error — purchase may not be saved");
   }
+}
+
+function restoreBackup() {
+  try {
+    const raw = localStorage.getItem(BACKUP_KEY);
+    if (!raw) { showToast("No backup available"); return; }
+    const backup = JSON.parse(raw);
+    const restored = JSON.parse(backup.data);
+    if (!Array.isArray(restored) || restored.length === 0) {
+      showToast("Backup was empty");
+      return;
+    }
+    const when = new Date(backup.savedAt).toLocaleString("en-GB", {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+    if (confirm(`Restore ${restored.length} purchases from backup taken ${when}? This replaces your current list.`)) {
+      purchases = restored;
+      savePurchases();
+      render();
+      showToast(`Restored ${restored.length} purchases`);
+    }
+  } catch(e) {
+    showToast("Couldn't read backup");
+  }
+}
+
+// Download a JSON snapshot — a full, re-importable backup (belt and braces vs CSV).
+function exportBackup() {
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    purchases: [...purchases].sort((a,b)=>a.date.localeCompare(b.date))
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `btc_backup_${new Date().toISOString().split("T")[0]}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("Backup saved");
 }
 
 function fmtGBP(n, dec=2) {
@@ -523,6 +607,46 @@ async function fetchPrice(manual = false) {
   render();
 }
 
+// ── HISTORICAL PRICE HISTORY ─────────────────────────────
+// Fetches daily BTC/GBP history so charts can show what BTC actually did
+// between your buys — not just straight lines connecting purchase prices.
+// Cached in localStorage and refreshed at most once/day to respect rate limits.
+const HISTORY_KEY = "btc_stack_history_v1";
+let priceHistory = null; // array of {t: ms, p: gbp}
+
+async function loadHistory() {
+  // Serve cache immediately if fresh (< 20h old)
+  try {
+    const cached = JSON.parse(localStorage.getItem(HISTORY_KEY));
+    if (cached && cached.data && Date.now() - cached.ts < 20 * 3600 * 1000) {
+      priceHistory = cached.data;
+      renderChart();
+    }
+  } catch(e) {}
+
+  // Only hit the network if we have no data or it's stale
+  const needsFetch = !priceHistory || (() => {
+    try { const c = JSON.parse(localStorage.getItem(HISTORY_KEY)); return !c || Date.now() - c.ts >= 20 * 3600 * 1000; }
+    catch(e) { return true; }
+  })();
+  if (!needsFetch) return;
+
+  try {
+    // Span from first purchase to today (capped at 365d for the free endpoint's daily granularity)
+    const firstMs = purchases.length ? new Date([...purchases].sort((a,b)=>a.date.localeCompare(b.date))[0].date).getTime() : Date.now() - 365*86400000;
+    const days = Math.min(365, Math.max(1, Math.ceil((Date.now() - firstMs) / 86400000)));
+    const res = await fetch(`https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=gbp&days=${days}&interval=daily`);
+    const data = await res.json();
+    if (data?.prices?.length) {
+      priceHistory = data.prices.map(([t, p]) => ({t, p}));
+      localStorage.setItem(HISTORY_KEY, JSON.stringify({data: priceHistory, ts: Date.now()}));
+      renderChart();
+    }
+  } catch(e) {
+    // Silent — charts fall back to buy-price-only mode if history unavailable
+  }
+}
+
 function computeStats() {
   const totalSpent = purchases.reduce((s, p) => s + p.cost, 0);
   const totalBtc = purchases.reduce((s, p) => s + p.btc, 0);
@@ -572,6 +696,30 @@ function render() {
     lastBuyStrip.style.display = "flex";
   } else {
     lastBuyStrip.style.display = "none";
+  }
+
+  // DCA efficiency: sats per £ lifetime, recent 4-buy avg, and whether
+  // recent buying beats the lifetime average (the real DCA question).
+  const dcaStrip = document.getElementById("dcaStrip");
+  if (purchases.length > 0 && s.totalBtc > 0) {
+    const lifetimeSats = (s.totalBtc * 1e8) / s.totalSpent; // sats per £
+    const recent = [...purchases].sort((a,b)=>b.date.localeCompare(a.date)).slice(0, 4);
+    const rCost = recent.reduce((x,p)=>x+p.cost,0);
+    const rBtc = recent.reduce((x,p)=>x+p.btc,0);
+    const recentSats = rCost > 0 ? (rBtc * 1e8) / rCost : 0;
+    document.getElementById("satsPerGbp").textContent = Math.round(lifetimeSats).toLocaleString("en-GB");
+    document.getElementById("satsRecent").textContent = Math.round(recentSats).toLocaleString("en-GB");
+    const effEl = document.getElementById("buyingEff");
+    if (recentSats > 0 && lifetimeSats > 0) {
+      const diff = ((recentSats - lifetimeSats) / lifetimeSats) * 100;
+      effEl.textContent = (diff >= 0 ? "+" : "") + diff.toFixed(0) + "%";
+      effEl.className = "dca-v " + (diff >= 0 ? "pos" : "neg");
+    } else {
+      effEl.textContent = "—"; effEl.className = "dca-v";
+    }
+    dcaStrip.style.display = "grid";
+  } else {
+    dcaStrip.style.display = "none";
   }
 
   // Stats
@@ -650,9 +798,9 @@ function cancelDelete() {
 function confirmDelete(id) {
   purchases = purchases.filter(p => p.id !== id);
   pendingDeleteId = null;
-  savePurchases();
+  savePurchases(true); // snapshot first — deletes are recoverable via Restore
   render();
-  showToast("Purchase deleted");
+  showToast("Deleted — undo with Restore");
 }
 
 function switchChart(type) {
@@ -664,87 +812,112 @@ function switchChart(type) {
 function renderChart() {
   const ctx = document.getElementById("mainChart").getContext("2d");
   const sorted = [...purchases].sort((a, b) => a.date.localeCompare(b.date));
-  if (sorted.length === 0) return;
+  if (sorted.length === 0) { if (chart) { chart.destroy(); chart = null; } return; }
 
-  const labels = sorted.map(p => {
-    const d = new Date(p.date);
-    return d.toLocaleDateString("en-GB", {month:"short", year:"2-digit"});
-  });
+  const buys = sorted.map(p => ({ t: new Date(p.date).getTime(), cost: p.cost, btc: p.btc, price: p.price }));
+  const hasHistory = priceHistory && priceHistory.length > 1;
+  const nowMs = Date.now();
 
-  let datasets, sub;
-  if (currentChartType === "pnl") {
-    sub = "Portfolio value vs cost basis" + (livePrice ? "" : " — enable live price for current value");
-    let cumCost = 0, cumBtc = 0;
-    const costSeries = [], valueSeries = [];
-    sorted.forEach(p => {
-      cumCost += p.cost;
-      cumBtc += p.btc;
-      costSeries.push(cumCost);
-      valueSeries.push(livePrice ? cumBtc * livePrice : null);
-    });
-    datasets = [
-      {label:"Invested (cost)", data: costSeries, borderColor:"#8b949e", backgroundColor:"rgba(139,148,158,0.05)", borderWidth:1.5, pointRadius:0, tension:0.2, fill:true},
-      {label:"Current Value", data: valueSeries, borderColor:"#f7931a", backgroundColor:"rgba(247,147,26,0.12)", borderWidth:2.5, pointRadius:0, tension:0.2, fill:true}
-    ];
-  } else {
-    sub = "BTC price · DCA average · power law trend";
-    let cumCost = 0, cumBtc = 0;
-    const buyPriceSeries = [], dcaSeries = [], plSeries = [];
-    sorted.forEach(p => {
-      cumCost += p.cost;
-      cumBtc += p.btc;
-      buyPriceSeries.push(p.price);
-      dcaSeries.push(cumCost / cumBtc);
-      plSeries.push(powerLawGBP(new Date(p.date).getTime()));
-    });
-    datasets = [
-      {label:"Buy Price", data: buyPriceSeries, borderColor:"#8b949e", borderWidth:1.5, pointRadius:0, tension:0.2, fill:false},
-      {label:"Your DCA Avg", data: dcaSeries, borderColor:"#f7931a", borderWidth:2.5, pointRadius:0, tension:0.2, fill:false},
-      {label:"Power Law Trend", data: plSeries, borderColor:"#6b46c1", borderWidth:1.5, borderDash:[3,3], pointRadius:0, tension:0.2, fill:false}
-    ];
-    if (livePrice) {
-      datasets.push({label:"Live Price", data: new Array(sorted.length).fill(livePrice), borderColor:"#3fb950", borderWidth:1.5, borderDash:[4,4], pointRadius:0, fill:false});
+  let datasets = [], sub = "";
+
+  if (currentChartType === "value") {
+    // TRUE stack value over time: at each historical day, value = BTC-held-so-far × that day's real price.
+    // Falls back to buy-point valuation if history hasn't loaded yet.
+    sub = hasHistory ? "Stack value tracked against what you put in" : "Loading price history…";
+    const valueSeries = [], costSeries = [];
+    if (hasHistory) {
+      let cumBtc = 0, cumCost = 0, bi = 0;
+      for (const {t, p} of priceHistory) {
+        while (bi < buys.length && buys[bi].t <= t) { cumBtc += buys[bi].btc; cumCost += buys[bi].cost; bi++; }
+        if (cumCost > 0) { valueSeries.push({x: t, y: cumBtc * p}); costSeries.push({x: t, y: cumCost}); }
+      }
+      // Pin the final point to live price for an up-to-the-second value
+      if (livePrice) {
+        const tCost = buys.reduce((s,b)=>s+b.cost,0), tBtc = buys.reduce((s,b)=>s+b.btc,0);
+        valueSeries.push({x: nowMs, y: tBtc * livePrice}); costSeries.push({x: nowMs, y: tCost});
+      }
+    } else {
+      let cumBtc = 0, cumCost = 0;
+      buys.forEach(b => { cumBtc += b.btc; cumCost += b.cost; valueSeries.push({x: b.t, y: livePrice ? cumBtc*livePrice : cumBtc*b.price}); costSeries.push({x: b.t, y: cumCost}); });
     }
+    datasets = [
+      {label:"Invested", data: costSeries, borderColor:"#8b949e", backgroundColor:"rgba(139,148,158,0.06)", borderWidth:1.5, pointRadius:0, fill:true, stepped:false},
+      {label:"Stack value", data: valueSeries, borderColor:"#f7931a", backgroundColor:"rgba(247,147,26,0.14)", borderWidth:2.5, pointRadius:0, fill:true}
+    ];
+  }
+  else if (currentChartType === "buys") {
+    // Real BTC price line with each buy dropped on as a dot, coloured by
+    // whether it landed below your running DCA average (green = a good buy).
+    sub = hasHistory ? "Your buys on the real price line — green beat your average" : "Loading price history…";
+    if (hasHistory) {
+      datasets.push({label:"BTC price", data: priceHistory.map(h => ({x: h.t, y: h.p})), borderColor:"#3a3a55", borderWidth:1.5, pointRadius:0, fill:false, order:2});
+    }
+    let cumBtc = 0, cumCost = 0;
+    const good = [], dear = [];
+    buys.forEach(b => { cumBtc += b.btc; cumCost += b.cost; const dca = cumCost/cumBtc; (b.price <= dca ? good : dear).push({x: b.t, y: b.price}); });
+    datasets.push({label:"Bought cheap", data: good, type:"scatter", backgroundColor:"#3fb950", borderColor:"#0a0a0f", borderWidth:1, pointRadius:4, pointHoverRadius:6, order:1});
+    datasets.push({label:"Bought dear", data: dear, type:"scatter", backgroundColor:"#f85149", borderColor:"#0a0a0f", borderWidth:1, pointRadius:4, pointHoverRadius:6, order:1});
+  }
+  else { // dca
+    sub = "Your average cost vs the power-law trend";
+    let cumCost = 0, cumBtc = 0;
+    const dcaSeries = [];
+    buys.forEach(b => { cumCost += b.cost; cumBtc += b.btc; dcaSeries.push({x: b.t, y: cumCost/cumBtc}); });
+    if (hasHistory) {
+      datasets.push({label:"BTC price", data: priceHistory.map(h => ({x: h.t, y: h.p})), borderColor:"#3a3a55", borderWidth:1.5, pointRadius:0, fill:false});
+    }
+    datasets.push({label:"Your DCA avg", data: dcaSeries, borderColor:"#f7931a", borderWidth:2.5, pointRadius:0, fill:false});
+    // Power-law trend across the visible span
+    const plStart = buys[0].t, plEnd = nowMs, steps = 60;
+    const plSeries = [];
+    for (let i = 0; i <= steps; i++) { const t = plStart + (plEnd - plStart) * i / steps; plSeries.push({x: t, y: powerLawGBP(t)}); }
+    datasets.push({label:"Power law", data: plSeries, borderColor:"#6b46c1", borderWidth:1.5, borderDash:[3,3], pointRadius:0, fill:false});
   }
 
   document.getElementById("chartSub").textContent = sub;
 
+  // Graceful degradation: if the time adapter failed to load, fall back to a
+  // plain category axis using formatted date labels so the chart still renders.
+  const timeAxisOK = typeof luxon !== "undefined";
+  let xScale;
+  if (timeAxisOK) {
+    xScale = {type: "time", time: {unit: "month", displayFormats: {month: "MMM yy"}}, ticks: {color:"#6b7280", font:{size:9}, maxRotation:0, autoSkip:true, maxTicksLimit:6}, grid: {color:"rgba(255,255,255,0.03)"}};
+  } else {
+    // Convert {x:ms,y} points to plain y-values against a shared date-label axis.
+    datasets.forEach(ds => { ds.data = ds.data.map(pt => (pt && typeof pt === "object") ? pt.y : pt); });
+    xScale = {ticks: {color:"#6b7280", font:{size:9}, maxRotation:0, autoSkip:true, maxTicksLimit:6}, grid: {color:"rgba(255,255,255,0.03)"}};
+  }
+
   if (chart) chart.destroy();
   chart = new Chart(ctx, {
     type: "line",
-    data: {labels, datasets},
+    data: {datasets},
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: false,
       interaction: {intersect: false, mode: "index"},
       plugins: {
-        legend: {
-          display: true,
-          position: "bottom",
-          labels: {color:"#9ca3af", font:{size:10}, boxWidth:10, boxHeight:2, padding:12}
-        },
+        legend: {display: true, position: "bottom", labels: {color:"#9ca3af", font:{size:10}, boxWidth:10, boxHeight:2, padding:12, usePointStyle: true}},
         tooltip: {
-          backgroundColor: "#1f1f2a",
-          borderColor: "#26262f",
-          borderWidth: 1,
-          titleColor: "#f7931a",
-          bodyColor: "#e8e8ed",
-          padding: 10,
-          displayColors: true,
+          backgroundColor: "#1f1f2a", borderColor: "#26262f", borderWidth: 1,
+          titleColor: "#f7931a", bodyColor: "#e8e8ed", padding: 10, displayColors: true,
           callbacks: {
-            label: function(ctx) {
-              return ctx.dataset.label + ": " + fmtGBP(ctx.parsed.y, 0);
+            title: items => (timeAxisOK && items.length) ? luxon.DateTime.fromMillis(items[0].parsed.x).toFormat("d LLL yyyy") : "",
+            label: c => {
+              if (currentChartType === "buys" && (c.dataset.label === "Bought cheap" || c.dataset.label === "Bought dear")) {
+                const b = buys.find(x => Math.abs(x.t - c.parsed.x) < 43200000);
+                if (b) return `${b.price >= 1000 ? fmtGBP(b.price,0) : fmtGBP(b.price,2)} · ${fmtGBP(b.cost,0)} → ${Math.round(b.btc*1e8).toLocaleString("en-GB")} sats`;
+              }
+              return c.dataset.label + ": " + fmtGBP(c.parsed.y, 0);
             }
           }
         }
       },
       scales: {
-        x: {
-          ticks: {color:"#6b7280", font:{size:9}, maxRotation:0, autoSkip:true, maxTicksLimit:6},
-          grid: {color:"rgba(255,255,255,0.03)"}
-        },
+        x: xScale,
         y: {
-          ticks: {color:"#6b7280", font:{size:9}, callback: v => "£" + (v/1000).toFixed(0) + "k"},
+          ticks: {color:"#6b7280", font:{size:9}, callback: v => v >= 1000 ? "£" + (v/1000).toFixed(0) + "k" : "£" + v.toFixed(0)},
           grid: {color:"rgba(255,255,255,0.03)"}
         }
       }
@@ -872,9 +1045,18 @@ function powerLawGBP(dateMs) {
 }
 
 function getUsdGbpRate() {
-  // Derive from live prices when available; fallback to ~0.78
-  if (livePrice && liveUsdPrice) return livePrice / liveUsdPrice;
-  return 0.78;
+  // Prefer the live-derived rate; persist it so the fallback tracks reality
+  // instead of a stale hardcoded constant.
+  if (livePrice && liveUsdPrice) {
+    const rate = livePrice / liveUsdPrice;
+    try { localStorage.setItem(RATE_CACHE_KEY, String(rate)); } catch(e) {}
+    return rate;
+  }
+  try {
+    const cached = parseFloat(localStorage.getItem(RATE_CACHE_KEY));
+    if (cached > 0) return cached;
+  } catch(e) {}
+  return 0.79; // last-resort only, if app has never once fetched a price
 }
 
 function initYearTabs() {
@@ -1003,17 +1185,48 @@ function handleImport(event) {
   reader.onload = e => {
     try {
       const text = e.target.result;
+      // JSON backup path — restore purchases wholesale from our own backup file.
+      if (file.name.toLowerCase().endsWith(".json") || text.trim().startsWith("{")) {
+        const payload = JSON.parse(text);
+        const rows = Array.isArray(payload) ? payload : payload.purchases;
+        if (!Array.isArray(rows) || rows.length === 0) { showToast("No purchases in backup file"); event.target.value=""; return; }
+        const clean = rows.filter(p => p.date && p.cost > 0 && p.btc > 0 && p.price > 0);
+        if (confirm(`Restore ${clean.length} purchases from this backup file? Replaces your current list (which is backed up).`)) {
+          purchases = clean.map((p, i) => ({date:p.date, cost:+p.cost, btc:+p.btc, price:+p.price, id: Date.now() + i}));
+          savePurchases(true);
+          render();
+          showToast(`Restored ${clean.length} purchases`);
+        }
+        event.target.value = "";
+        return;
+      }
       const parsed = parseImportedCSV(text);
       if (parsed.length === 0) {
         showToast("No valid rows found in CSV");
         return;
       }
-      const confirmMsg = `Replace your ${purchases.length} purchases with ${parsed.length} imported entries?`;
-      if (confirm(confirmMsg)) {
-        purchases = parsed.map((p, i) => ({...p, id: Date.now() + i}));
-        savePurchases();
+      // Merge is safer than replace: offer it first, fall back to replace.
+      // A row counts as a duplicate if same date + same BTC amount (to 8dp).
+      const key = p => `${p.date}|${p.btc.toFixed(8)}`;
+      const existingKeys = new Set(purchases.map(key));
+      const fresh = parsed.filter(p => !existingKeys.has(key(p)));
+      const dupes = parsed.length - fresh.length;
+
+      const mergeMsg = `Import ${parsed.length} rows into your existing ${purchases.length}?\n\n` +
+        `• OK = Merge (adds ${fresh.length} new, skips ${dupes} already present)\n` +
+        `• Cancel = choose Replace instead`;
+
+      if (confirm(mergeMsg)) {
+        if (fresh.length === 0) { showToast("Nothing new to add"); event.target.value=""; return; }
+        purchases = [...purchases, ...fresh.map((p, i) => ({...p, id: Date.now() + i}))];
+        savePurchases(true);
         render();
-        showToast(`Imported ${parsed.length} purchases`);
+        showToast(`Merged ${fresh.length} new purchases`);
+      } else if (confirm(`Replace ALL ${purchases.length} purchases with the ${parsed.length} imported? Your current list is backed up and restorable.`)) {
+        purchases = parsed.map((p, i) => ({...p, id: Date.now() + i}));
+        savePurchases(true);
+        render();
+        showToast(`Replaced with ${parsed.length} purchases`);
       }
     } catch(err) {
       showToast("CSV parse error — check format");
@@ -1024,10 +1237,47 @@ function handleImport(event) {
   reader.readAsText(file);
 }
 
+function splitCsvLine(line) {
+  const cells = [];
+  let cur = "", inQ = false;
+  for (const ch of line) {
+    if (ch === '"') inQ = !inQ;
+    else if (ch === "," && !inQ) { cells.push(cur); cur = ""; }
+    else cur += ch;
+  }
+  cells.push(cur);
+  return cells.map(c => c.trim());
+}
+
+function num(s) { return parseFloat(String(s).replace(/[£$,\s]/g, "")); }
+
 function parseImportedCSV(text) {
-  // Tolerant parser: handles our own export format AND the user's original
-  // messy format (£ symbols, commas in numbers, etc.)
   const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length === 0) return [];
+
+  // Fast path: our own export format, identified by its header.
+  // Columns are read by name, not by guessing from magnitude — robust even if
+  // a buy's cost ever exceeds the BTC price, or amounts look unusual.
+  const header = splitCsvLine(lines[0]).map(h => h.toLowerCase());
+  const di = header.findIndex(h => h.startsWith("date"));
+  const ci = header.findIndex(h => h.includes("cost"));
+  const bi = header.findIndex(h => h.includes("btc amount") || h === "btc");
+  const pi = header.findIndex(h => h.includes("price"));
+  if (di !== -1 && ci !== -1 && bi !== -1 && pi !== -1) {
+    const out = [];
+    for (let r = 1; r < lines.length; r++) {
+      const c = splitCsvLine(lines[r]);
+      const date = c[di];
+      const cost = num(c[ci]), btc = num(c[bi]), price = num(c[pi]);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+      if (!(cost > 0) || !(btc > 0) || !(price > 0)) continue;
+      out.push({date, cost, btc, price});
+    }
+    if (out.length) return out;
+  }
+
+  // Fallback: tolerant parser for messy / foreign formats
+  // (£ symbols, commas, dd/mm/yyyy dates, unknown column order).
   const out = [];
   for (const line of lines) {
     // Split respecting quotes
@@ -1088,6 +1338,7 @@ initYearTabs();
 loadPurchases();
 render();
 fetchPrice();
+loadHistory();
 
 // Auto-refresh price every 5 mins when visible
 setInterval(() => {
