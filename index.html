@@ -14,179 +14,267 @@
 <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js"></script>
 <style>
+  :root{
+    --bg:#0a0a0f;--card:#101019;--card2:#16161f;--line:#1f1f2a;--line2:#26262f;
+    --ink:#e8e8ed;--ink2:#9ca3af;--ink3:#6b7280;--ink4:#3a3a44;
+    --btc:#f7931a;--btc2:#e8820c;--pos:#3fb950;--neg:#f85149;--pl:#a78bfa;
+  }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{background:#0a0a0f;color:#e8e8ed;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow-x:hidden}
-  body{padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom) 16px;max-width:560px;margin:0 auto;min-height:100vh}
+  html,body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow-x:hidden}
+  body{padding:env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 76px) 16px;max-width:560px;margin:0 auto;min-height:100vh}
+  button{font-family:inherit}
 
-  .header{display:flex;align-items:center;justify-content:space-between;padding:16px 0 20px;position:sticky;top:0;background:linear-gradient(to bottom,#0a0a0f 70%,transparent);z-index:10}
+  .header{display:flex;align-items:center;justify-content:space-between;padding:16px 0 18px;position:sticky;top:0;background:linear-gradient(to bottom,var(--bg) 70%,transparent);z-index:10}
   .brand{display:flex;align-items:center;gap:10px}
-  .brand-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#f7931a,#e8820c);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;color:#fff;box-shadow:0 4px 12px rgba(247,147,26,0.3)}
+  .brand-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--btc),var(--btc2));display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold;color:#fff;box-shadow:0 4px 12px rgba(247,147,26,0.3)}
   .brand-text{font-size:17px;font-weight:700;letter-spacing:-0.02em}
-  .brand-sub{font-size:11px;color:#6b7280;margin-top:1px}
-  .refresh-btn{background:#16161f;border:1px solid #26262f;color:#e8e8ed;width:36px;height:36px;border-radius:10px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
-  .refresh-btn:active{transform:scale(0.95);background:#1f1f2a}
-  .refresh-btn.spinning{animation:spin 0.8s linear infinite}
+  .brand-sub{font-size:11px;color:var(--ink3);margin-top:1px}
+  .head-btns{display:flex;gap:8px}
+  .icon-btn{background:var(--card2);border:1px solid var(--line2);color:var(--ink);width:36px;height:36px;border-radius:10px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+  .icon-btn:active{transform:scale(0.95);background:var(--line)}
+  .icon-btn svg{width:18px;height:18px}
+  .icon-btn.on{color:var(--btc);border-color:rgba(247,147,26,0.4)}
+  .icon-btn.add{background:var(--btc);border-color:var(--btc);color:#fff;font-size:20px;font-weight:600}
+  .spinning{animation:spin 0.8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  .live-price-card{background:linear-gradient(135deg,rgba(247,147,26,0.12),rgba(247,147,26,0.04));border:1px solid rgba(247,147,26,0.25);border-radius:16px;padding:18px 20px;margin-bottom:14px;position:relative;overflow:hidden}
+  /* Views + bottom nav */
+  .view{display:none}
+  .view.active{display:block;animation:fade .2s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  .nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(10,10,15,0.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px 8px calc(env(safe-area-inset-bottom) + 6px)}
+  .nav-inner{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+  .nav-btn{background:transparent;border:none;color:var(--ink3);display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;font-size:10px;font-weight:600;letter-spacing:0.04em;cursor:pointer;border-radius:10px}
+  .nav-btn svg{width:22px;height:22px}
+  .nav-btn.active{color:var(--btc)}
+
+  /* Cards */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+  .card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+  .card-title{font-size:11px;color:var(--ink2);letter-spacing:0.08em;text-transform:uppercase;font-weight:600}
+  .card-note{font-size:11px;color:var(--ink3);line-height:1.5}
+  .muted{color:var(--ink3)}
+  .positive,.pos{color:var(--pos)}
+  .negative,.neg{color:var(--neg)}
+  .tnum{font-variant-numeric:tabular-nums}
+
+  /* Live price */
+  .live-price-card{background:linear-gradient(135deg,rgba(247,147,26,0.12),rgba(247,147,26,0.04));border:1px solid rgba(247,147,26,0.25);border-radius:16px;padding:18px 20px 16px;margin-bottom:14px;position:relative;overflow:hidden}
   .live-price-card::before{content:'';position:absolute;top:0;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(247,147,26,0.15),transparent 70%);pointer-events:none}
-  .live-price-label{font-size:10px;color:#f7931a;letter-spacing:0.12em;text-transform:uppercase;font-weight:600;display:flex;align-items:center;gap:6px}
-  .live-dot{width:6px;height:6px;border-radius:50%;background:#3fb950;box-shadow:0 0 8px #3fb950;animation:pulse 2s infinite}
+  .live-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .live-price-label{font-size:10px;color:var(--btc);letter-spacing:0.12em;text-transform:uppercase;font-weight:600;display:flex;align-items:center;gap:6px}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:var(--pos);box-shadow:0 0 8px var(--pos);animation:pulse 2s infinite}
+  .live-dot.stale{background:var(--ink3);box-shadow:none;animation:none}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-  .live-price-value{font-size:32px;font-weight:700;color:#fff;margin-top:6px;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
-  .live-price-meta{font-size:12px;color:#9ca3af;margin-top:4px;display:flex;gap:12px;flex-wrap:wrap}
-  .live-price-meta span.positive{color:#3fb950}
-  .live-price-meta span.negative{color:#f85149}
+  .live-price-value{font-size:32px;font-weight:700;color:#fff;margin-top:6px;letter-spacing:-0.02em}
+  .live-spark{width:120px;height:44px;flex-shrink:0;margin-top:4px}
+  .live-spark svg{width:100%;height:100%;display:block}
+  .chg-row{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+  .chg{font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.04);font-variant-numeric:tabular-nums;color:var(--ink2)}
+  .chg b{font-weight:600;margin-left:4px}
+  .chg.pos b{color:var(--pos)}
+  .chg.neg b{color:var(--neg)}
+  .range24{margin-top:12px;display:none}
+  .range24.show{display:block}
+  .range-bar{height:4px;border-radius:2px;background:rgba(255,255,255,0.08);position:relative;margin:6px 0 4px}
+  .range-fill{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:linear-gradient(90deg,rgba(247,147,26,0.2),rgba(247,147,26,0.7))}
+  .range-mark{position:absolute;top:50%;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid var(--btc);transform:translate(-50%,-50%)}
+  .range-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);font-variant-numeric:tabular-nums}
+  .live-price-meta{font-size:12px;color:var(--ink2);margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .live-price-meta span.positive{color:var(--pos)}
+  .live-price-meta span.negative{color:var(--neg)}
 
+  /* Stats */
   .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-  .stat{background:#101019;border:1px solid #1f1f2a;border-radius:14px;padding:14px 16px}
-  .stat-label{font-size:10px;color:#6b7280;letter-spacing:0.1em;text-transform:uppercase;font-weight:600}
-  .stat-value{font-size:19px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;word-break:break-all}
-  .stat-sub{font-size:11px;color:#6b7280;margin-top:2px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;min-width:0}
+  .stat-label{font-size:10px;color:var(--ink3);letter-spacing:0.1em;text-transform:uppercase;font-weight:600}
+  .stat-value{font-size:19px;font-weight:700;margin-top:4px;letter-spacing:-0.01em;word-break:break-word}
+  .stat-sub{font-size:11px;color:var(--ink3);margin-top:2px}
   .stat.highlight{background:linear-gradient(135deg,rgba(247,147,26,0.08),rgba(247,147,26,0.02));border-color:rgba(247,147,26,0.2)}
-  .stat.highlight .stat-value{color:#f7931a}
+  .stat.highlight .stat-value{color:var(--btc)}
 
-  .pnl-card{background:#101019;border:1px solid #1f1f2a;border-radius:14px;padding:16px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
-  .pnl-label{font-size:10px;color:#6b7280;letter-spacing:0.1em;text-transform:uppercase;font-weight:600}
-  .pnl-value{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+  .pnl-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+  .pnl-label{font-size:10px;color:var(--ink3);letter-spacing:0.1em;text-transform:uppercase;font-weight:600}
+  .pnl-value{font-size:22px;font-weight:700}
   .pnl-pct{font-size:13px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
-  .positive{color:#3fb950}
-  .negative{color:#f85149}
 
-  .chart-card{background:#101019;border:1px solid #1f1f2a;border-radius:14px;padding:16px;margin-bottom:14px}
-  .chart-title{font-size:11px;color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
-  .chart-sub{font-size:11px;color:#6b7280;margin-bottom:12px}
-  .chart-wrap{position:relative;height:200px}
-  .chart-tabs{display:flex;gap:4px;background:#0a0a0f;border-radius:8px;padding:3px;margin-bottom:12px}
-  .chart-tab{flex:1;padding:7px 10px;background:transparent;border:none;color:#6b7280;font-size:11px;font-weight:600;cursor:pointer;border-radius:6px;transition:all 0.2s;letter-spacing:0.02em}
-  .chart-tab.active{background:#1f1f2a;color:#f7931a}
+  /* Goal */
+  .goal-big{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .goal-pct{font-size:26px;font-weight:700;color:var(--btc);letter-spacing:-0.02em}
+  .goal-of{font-size:12px;color:var(--ink2);text-align:right;font-variant-numeric:tabular-nums}
+  .goal-bar{height:10px;border-radius:5px;background:var(--bg);margin:12px 0 6px;position:relative;overflow:hidden}
+  .goal-fill{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:linear-gradient(90deg,var(--btc2),var(--btc));transition:width .6s ease}
+  .goal-tick{position:absolute;top:0;bottom:0;width:2px;background:var(--card)}
+  .goal-lines{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+  .goal-line{display:flex;justify-content:space-between;gap:10px;font-size:12px}
+  .goal-line span:first-child{color:var(--ink3)}
+  .goal-line span:last-child{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+  .goal-edit{display:none;gap:8px;align-items:center;margin-bottom:12px}
+  .goal-edit.show{display:flex}
+  .goal-edit input{flex:1;min-width:0}
+  .text-btn{background:transparent;border:1px solid var(--line2);color:var(--ink2);font-size:11px;padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
+  .text-btn:active{background:var(--line);color:var(--btc)}
+  .text-btn.primary{background:var(--btc);border-color:var(--btc);color:#fff;font-weight:700}
 
-  .add-btn{width:100%;background:linear-gradient(135deg,#f7931a,#e8820c);border:none;color:#fff;font-size:15px;font-weight:700;padding:15px;border-radius:14px;cursor:pointer;letter-spacing:-0.01em;box-shadow:0 4px 16px rgba(247,147,26,0.25);transition:all 0.2s;margin-bottom:14px}
-  .add-btn:active{transform:scale(0.98)}
-
-  .add-form{background:#101019;border:1px solid rgba(247,147,26,0.3);border-radius:14px;padding:18px;margin-bottom:14px;display:none}
-  .add-form.show{display:block}
-  .form-title{font-size:13px;font-weight:700;color:#f7931a;margin-bottom:14px}
-  .form-row{margin-bottom:12px}
-  .form-row label{display:block;font-size:11px;color:#6b7280;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;margin-bottom:6px}
-  .form-row input{width:100%;background:#0a0a0f;border:1px solid #26262f;color:#e8e8ed;padding:12px 14px;border-radius:10px;font-size:15px;font-family:inherit;outline:none;transition:border 0.2s;font-variant-numeric:tabular-nums}
-  .form-row input:focus{border-color:#f7931a}
-  .form-actions{display:flex;gap:8px;margin-top:16px}
-  .btn-save{flex:1;background:#f7931a;border:none;color:#fff;font-size:14px;font-weight:700;padding:13px;border-radius:10px;cursor:pointer}
-  .btn-cancel{flex:1;background:transparent;border:1px solid #26262f;color:#9ca3af;font-size:14px;font-weight:600;padding:13px;border-radius:10px;cursor:pointer}
-  .auto-calc-note{font-size:11px;color:#6b7280;font-style:italic;margin-top:-6px;margin-bottom:10px}
-
-  .history-card{background:#101019;border:1px solid #1f1f2a;border-radius:14px;overflow:hidden;margin-bottom:30px}
-  .history-header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid #1f1f2a}
-  .history-title{font-size:11px;color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase;font-weight:600}
-  .history-count{font-size:11px;color:#6b7280}
-  .history-list{max-height:400px;overflow-y:auto;-webkit-overflow-scrolling:touch}
-  .history-item{padding:12px 16px;border-bottom:1px solid #16161f;display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}
-  .history-item:last-child{border-bottom:none}
-  .h-date{font-size:12px;color:#9ca3af;font-variant-numeric:tabular-nums}
-  .h-btc{font-size:13px;color:#f7931a;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
-  .h-cost{font-size:13px;color:#e8e8ed;font-variant-numeric:tabular-nums;text-align:right}
-  .h-price{font-size:11px;color:#6b7280;font-variant-numeric:tabular-nums;margin-top:2px}
-  .delete-btn{background:transparent;border:none;color:#3a3a44;font-size:18px;cursor:pointer;padding:4px 8px;line-height:1}
-  .delete-btn:active{color:#f85149}
-
-  .footer{text-align:center;font-size:10px;color:#3a3a44;padding:20px 0 30px;letter-spacing:0.05em}
-
-  .empty{padding:30px 20px;text-align:center;color:#6b7280;font-size:13px}
-
-  /* Toast */
-  .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(100px);background:#1f1f2a;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;border:1px solid #f7931a;transition:transform 0.3s;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.4)}
-  .toast.show{transform:translateX(-50%) translateY(0)}
-
-  /* Confirmation */
-  .confirm-row{display:flex;gap:8px}
-  .confirm-yes{background:#f85149;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer}
-  .confirm-no{background:transparent;border:1px solid #26262f;color:#9ca3af;padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer}
-
-  /* Projection card */
-  .proj-card{background:#101019;border:1px solid #1f1f2a;border-radius:14px;padding:16px;margin-bottom:14px}
-  .proj-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:8px}
-  .proj-title{font-size:11px;color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase;font-weight:600}
-  .proj-info{font-size:14px;color:#6b7280;cursor:pointer;line-height:1;padding:2px 6px}
-  .proj-info:active{color:#f7931a}
-  .year-tabs{display:flex;gap:4px;background:#0a0a0f;border-radius:8px;padding:3px;margin-bottom:14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .year-tab{flex:1;min-width:55px;padding:8px 4px;background:transparent;border:none;color:#6b7280;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px;transition:all 0.2s;font-variant-numeric:tabular-nums}
-  .year-tab.active{background:#1f1f2a;color:#f7931a}
-  .scenario{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:11px 12px;border-radius:10px;margin-bottom:6px;background:#0a0a0f}
-  .scenario:last-child{margin-bottom:0}
-  .scenario-tag{font-size:9px;font-weight:700;padding:3px 7px;border-radius:4px;letter-spacing:0.06em;text-transform:uppercase}
-  .scenario.bear .scenario-tag{background:rgba(248,81,73,0.15);color:#f85149}
-  .scenario.base .scenario-tag{background:rgba(247,147,26,0.15);color:#f7931a}
-  .scenario.bull .scenario-tag{background:rgba(63,185,80,0.15);color:#3fb950}
-  .scenario-price{font-size:13px;color:#9ca3af;font-variant-numeric:tabular-nums}
-  .scenario-stack{font-size:15px;font-weight:700;color:#e8e8ed;font-variant-numeric:tabular-nums;text-align:right}
-  .proj-disclaimer{font-size:10px;color:#6b7280;font-style:italic;margin-top:10px;line-height:1.5}
-  .proj-info-box{background:#0a0a0f;border:1px solid #26262f;border-radius:10px;padding:12px 14px;margin-top:10px;font-size:11px;color:#9ca3af;line-height:1.6;display:none}
-  .proj-info-box.show{display:block}
-  .proj-info-box strong{color:#f7931a}
-
-  /* Future stack subsection */
-  .future-stack{margin-top:14px;padding-top:14px;border-top:1px solid #1f1f2a}
-  .future-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-  .future-row label{font-size:11px;color:#9ca3af;flex:1;min-width:0}
-  .future-row input{background:#0a0a0f;border:1px solid #26262f;color:#e8e8ed;padding:6px 10px;border-radius:6px;font-size:13px;width:80px;font-family:inherit;outline:none;font-variant-numeric:tabular-nums;text-align:right}
-  .future-row input:focus{border-color:#f7931a}
-  .future-result{background:linear-gradient(135deg,rgba(247,147,26,0.08),transparent);border-radius:10px;padding:12px;margin-top:8px}
-  .future-result-line{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px}
-  .future-result-line.total{margin-top:6px;padding-top:8px;border-top:1px solid rgba(247,147,26,0.15);font-weight:700;font-size:14px}
-  .future-label{color:#9ca3af}
-  .future-value{color:#e8e8ed;font-variant-numeric:tabular-nums;font-weight:600}
-  .future-value.highlight{color:#f7931a}
-
-  /* Export button */
-  .export-btn{background:transparent;border:1px solid #26262f;color:#9ca3af;font-size:11px;padding:7px 10px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
-  .export-btn:active{background:#1f1f2a;color:#f7931a}
-  .io-btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-
-  /* Power law deviation badge */
-  .pl-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:0.02em}
-  .pl-badge.below{background:rgba(63,185,80,0.12);color:#3fb950}
-  .pl-badge.above{background:rgba(248,81,73,0.12);color:#f85149}
-  .pl-badge.fair{background:rgba(247,147,26,0.12);color:#f7931a}
-
-  /* Days since last buy */
-  .last-buy-strip{background:#101019;border:1px solid #1f1f2a;border-radius:10px;padding:8px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;font-size:11px}
-  .last-buy-strip span{color:#9ca3af;letter-spacing:0.04em}
-  .last-buy-strip strong{color:#f7931a;font-weight:700;font-variant-numeric:tabular-nums}
-
-  /* DCA efficiency strip */
+  /* Last buy / dca strips */
+  .last-buy-strip{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;font-size:11px}
+  .last-buy-strip span{color:var(--ink2);letter-spacing:0.04em}
+  .last-buy-strip strong{color:var(--btc);font-weight:700;font-variant-numeric:tabular-nums}
   .dca-strip{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
-  .dca-cell{background:#101019;border:1px solid #1f1f2a;border-radius:12px;padding:11px 12px;text-align:center}
-  .dca-k{font-size:9px;color:#6b7280;letter-spacing:0.08em;text-transform:uppercase;font-weight:600}
-  .dca-v{font-size:15px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums;color:#e8e8ed}
-  .dca-v.pos{color:#3fb950}
-  .dca-v.neg{color:#f85149}
+  .dca-cell{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;text-align:center}
+  .dca-k{font-size:9px;color:var(--ink3);letter-spacing:0.08em;text-transform:uppercase;font-weight:600}
+  .dca-v{font-size:15px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums;color:var(--ink)}
+  .dca-v.pos{color:var(--pos)}
+  .dca-v.neg{color:var(--neg)}
 
-  /* Yearly summary */
-  .yearly-card{background:#101019;border:1px solid #1f1f2a;border-radius:14px;padding:0;margin-bottom:14px;overflow:hidden}
-  .yearly-head{padding:14px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
-  .yearly-head .chev{color:#6b7280;transition:transform 0.2s;font-size:11px}
-  .yearly-card.open .chev{transform:rotate(180deg)}
-  .yearly-body{display:none;border-top:1px solid #1f1f2a}
-  .yearly-card.open .yearly-body{display:block}
-  .yearly-row{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:8px;padding:11px 16px;border-bottom:1px solid #16161f;font-size:12px;align-items:center}
+  /* Charts */
+  .chart-sub{font-size:11px;color:var(--ink3);margin-bottom:10px;min-height:14px}
+  .chart-wrap{position:relative;height:220px}
+  .chart-wrap.tall{height:260px}
+  .seg{display:flex;gap:4px;background:var(--bg);border-radius:8px;padding:3px;margin-bottom:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .seg::-webkit-scrollbar{display:none}
+  .seg button{flex:1;padding:7px 8px;background:transparent;border:none;color:var(--ink3);font-size:11px;font-weight:600;cursor:pointer;border-radius:6px;transition:all 0.2s;letter-spacing:0.02em;white-space:nowrap}
+  .seg button.active{background:var(--line);color:var(--btc)}
+  .seg.small{display:inline-flex;margin-bottom:0;padding:2px}
+  .seg.small button{padding:4px 8px;font-size:10px;flex:none}
+  .chart-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ink3)}
+
+  /* Metric tiles (insights + market) */
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tile{background:var(--bg);border-radius:10px;padding:11px 12px;min-width:0}
+  .tile-k{font-size:9px;color:var(--ink3);letter-spacing:0.08em;text-transform:uppercase;font-weight:600}
+  .tile-v{font-size:16px;font-weight:700;margin-top:4px;letter-spacing:-0.01em;word-break:break-word}
+  .tile-s{font-size:10px;color:var(--ink3);margin-top:2px;line-height:1.4}
+  .mini-bar{height:4px;border-radius:2px;background:rgba(255,255,255,0.08);margin-top:7px;overflow:hidden}
+  .mini-bar i{display:block;height:100%;border-radius:2px;background:var(--btc)}
+
+  /* Heatmap */
+  .heat{display:grid;grid-template-columns:40px repeat(26,1fr);gap:2px;align-items:center}
+  .heat-lbl{font-size:9px;color:var(--ink3);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .heat-cell{aspect-ratio:1;border-radius:2px;background:#1a1a24;cursor:pointer;border:none;padding:0}
+  .heat-cell.blank{background:transparent;cursor:default}
+  .heat-cell.l1{background:rgba(247,147,26,0.3)}
+  .heat-cell.l2{background:rgba(247,147,26,0.55)}
+  .heat-cell.l3{background:rgba(247,147,26,0.8)}
+  .heat-cell.l4{background:#ffb347}
+  .heat-cell.now{outline:1px solid var(--ink2);outline-offset:1px}
+  .heat-cell.sel{outline:2px solid #fff;outline-offset:1px}
+  .heat-legend{display:flex;align-items:center;justify-content:flex-end;gap:3px;font-size:9px;color:var(--ink3);margin-top:8px}
+  .heat-legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+  .heat-detail{font-size:11px;color:var(--ink2);margin-top:8px;min-height:15px}
+  .streaks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+
+  /* Yearly */
+  .yearly-row{display:grid;grid-template-columns:38px 1.1fr 1fr 0.9fr 0.9fr;gap:6px;padding:10px 0;border-bottom:1px solid var(--card2);font-size:12px;align-items:center}
   .yearly-row:last-child{border-bottom:none}
-  .yearly-row.header{background:#0a0a0f;font-size:10px;color:#6b7280;letter-spacing:0.06em;text-transform:uppercase;font-weight:600}
-  .yr-year{color:#f7931a;font-weight:700;font-variant-numeric:tabular-nums}
-  .yr-val{color:#e8e8ed;font-variant-numeric:tabular-nums;text-align:right}
-  .yr-val.sub{color:#9ca3af;font-size:11px}
-  .yr-btc{color:#f7931a;font-variant-numeric:tabular-nums;text-align:right;font-size:11px}
+  .yearly-row.header{font-size:9px;color:var(--ink3);letter-spacing:0.06em;text-transform:uppercase;font-weight:600;padding-top:0}
+  .yr-year{color:var(--btc);font-weight:700;font-variant-numeric:tabular-nums}
+  .yr-val{color:var(--ink);font-variant-numeric:tabular-nums;text-align:right}
+  .yr-sub{color:var(--ink3);font-size:10px;text-align:right;font-variant-numeric:tabular-nums}
 
-  /* Edit indicator on history rows */
-  .history-item{cursor:pointer;transition:background 0.15s}
-  .history-item:active{background:#16161f}
-  .history-item.editing{background:rgba(247,147,26,0.06);border-left:3px solid #f7931a}
+  /* Fear & greed */
+  .fng-top{display:flex;align-items:center;gap:14px}
+  .fng-num{font-size:40px;font-weight:700;letter-spacing:-0.03em;line-height:1}
+  .fng-cls{font-size:14px;font-weight:700}
+  .fng-scale{height:8px;border-radius:4px;background:linear-gradient(90deg,#f85149,#8b949e 50%,#3fb950);position:relative;margin:14px 0 4px}
+  .fng-scale .range-mark{border-color:var(--bg);width:12px;height:12px}
+  .fng-hist{display:flex;gap:8px;margin-top:10px}
+  .fng-hist div{flex:1;background:var(--bg);border-radius:8px;padding:8px;text-align:center}
+  .fng-hist b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
+  .fng-hist span{font-size:9px;color:var(--ink3);letter-spacing:0.06em;text-transform:uppercase}
+  .fng-spark{height:40px;margin-top:10px}
+  .fng-spark svg{width:100%;height:100%;display:block}
 
-  /* Form title — editing variant */
-  .add-form.editing{border-color:#3fb950}
-  .add-form.editing .form-title{color:#3fb950}
+  /* Power law */
+  .proj-info{font-size:14px;color:var(--ink3);cursor:pointer;line-height:1;padding:2px 6px}
+  .proj-info:active{color:var(--btc)}
+  .year-tabs button{min-width:52px;font-size:12px;font-variant-numeric:tabular-nums}
+  .scenario{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:11px 12px;border-radius:10px;margin-bottom:6px;background:var(--bg)}
+  .scenario-tag{font-size:9px;font-weight:700;padding:3px 7px;border-radius:4px;letter-spacing:0.06em;text-transform:uppercase}
+  .scenario.bear .scenario-tag{background:rgba(248,81,73,0.15);color:var(--neg)}
+  .scenario.base .scenario-tag{background:rgba(247,147,26,0.15);color:var(--btc)}
+  .scenario.bull .scenario-tag{background:rgba(63,185,80,0.15);color:var(--pos)}
+  .scenario-price{font-size:13px;color:var(--ink2);font-variant-numeric:tabular-nums}
+  .scenario-stack{font-size:15px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;text-align:right}
+  .scenario-price small{display:block;font-size:10px;color:var(--ink3)}
+  .scenario-stack small{display:block;font-size:10px;color:var(--ink3);font-weight:500}
+  .proj-disclaimer{font-size:10px;color:var(--ink3);font-style:italic;margin-top:10px;line-height:1.5}
+  .proj-info-box{background:var(--bg);border:1px solid var(--line2);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:11px;color:var(--ink2);line-height:1.6;display:none}
+  .proj-info-box.show{display:block}
+  .proj-info-box strong{color:var(--btc)}
+  .future-stack{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+  .future-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .future-row label{font-size:11px;color:var(--ink2);flex:1;min-width:0}
+  .future-row input{background:var(--bg);border:1px solid var(--line2);color:var(--ink);padding:6px 10px;border-radius:6px;font-size:13px;width:80px;font-family:inherit;outline:none;font-variant-numeric:tabular-nums;text-align:right}
+  .future-row input:focus{border-color:var(--btc)}
+  .future-result{background:linear-gradient(135deg,rgba(247,147,26,0.08),transparent);border-radius:10px;padding:12px;margin-top:8px}
+  .future-result-line{display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px;gap:10px}
+  .future-result-line.total{margin-top:6px;padding-top:8px;border-top:1px solid rgba(247,147,26,0.15);font-weight:700;font-size:14px}
+  .future-label{color:var(--ink2)}
+  .future-value{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+  .future-value.highlight{color:var(--btc)}
 
-  /* Hidden file input */
+  .pl-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:0.02em}
+  .pl-badge.below{background:rgba(63,185,80,0.12);color:var(--pos)}
+  .pl-badge.above{background:rgba(248,81,73,0.12);color:var(--neg)}
+  .pl-badge.fair{background:rgba(247,147,26,0.12);color:var(--btc)}
+
+  /* Add form */
+  .add-btn{width:100%;background:linear-gradient(135deg,var(--btc),var(--btc2));border:none;color:#fff;font-size:15px;font-weight:700;padding:15px;border-radius:14px;cursor:pointer;letter-spacing:-0.01em;box-shadow:0 4px 16px rgba(247,147,26,0.25);transition:all 0.2s;margin-bottom:14px}
+  .add-btn:active{transform:scale(0.98)}
+  .add-form{background:var(--card);border:1px solid rgba(247,147,26,0.3);border-radius:14px;padding:18px;margin-bottom:14px;display:none}
+  .add-form.show{display:block}
+  .form-title{font-size:13px;font-weight:700;color:var(--btc);margin-bottom:14px}
+  .form-row{margin-bottom:12px}
+  .form-row label{display:block;font-size:11px;color:var(--ink3);letter-spacing:0.06em;text-transform:uppercase;font-weight:600;margin-bottom:6px}
+  input.field,.form-row input{width:100%;background:var(--bg);border:1px solid var(--line2);color:var(--ink);padding:12px 14px;border-radius:10px;font-size:15px;font-family:inherit;outline:none;transition:border 0.2s;font-variant-numeric:tabular-nums}
+  input.field:focus,.form-row input:focus{border-color:var(--btc)}
+  input.field.sm{padding:8px 10px;font-size:14px}
+  .form-actions{display:flex;gap:8px;margin-top:16px}
+  .btn-save{flex:1;background:var(--btc);border:none;color:#fff;font-size:14px;font-weight:700;padding:13px;border-radius:10px;cursor:pointer}
+  .btn-cancel{flex:1;background:transparent;border:1px solid var(--line2);color:var(--ink2);font-size:14px;font-weight:600;padding:13px;border-radius:10px;cursor:pointer}
+  .auto-calc-note{font-size:11px;color:var(--ink3);font-style:italic;margin-top:-6px;margin-bottom:10px}
+  .add-form.editing{border-color:var(--pos)}
+  .add-form.editing .form-title{color:var(--pos)}
+
+  /* History */
+  .history-card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:14px}
+  .history-header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .history-count{font-size:11px;color:var(--ink3)}
+  .history-tools{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .history-list{max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .history-item{padding:12px 16px;border-bottom:1px solid var(--card2);display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;cursor:pointer;transition:background 0.15s}
+  .history-item:last-child{border-bottom:none}
+  .history-item:active{background:var(--card2)}
+  .history-item.editing{background:rgba(247,147,26,0.06);border-left:3px solid var(--btc)}
+  .h-date{font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums}
+  .h-price{font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums;margin-top:2px}
+  .h-btc{font-size:13px;color:var(--btc);font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+  .h-cost{font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums;text-align:right;margin-top:2px}
+  .h-gain{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;padding:3px 7px;border-radius:6px;min-width:56px;text-align:center}
+  .h-gain.pos{background:rgba(63,185,80,0.12)}
+  .h-gain.neg{background:rgba(248,81,73,0.12)}
+  .delete-btn{background:transparent;border:none;color:var(--ink4);font-size:18px;cursor:pointer;padding:4px 6px;line-height:1}
+  .delete-btn:active{color:var(--neg)}
+  .confirm-row{display:flex;gap:6px}
+  .confirm-yes{background:var(--neg);color:#fff;border:none;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer}
+  .confirm-no{background:transparent;border:1px solid var(--line2);color:var(--ink2);padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer}
+  select.sort{background:var(--bg);color:var(--ink2);border:1px solid var(--line2);border-radius:8px;padding:6px 8px;font-size:11px;font-family:inherit;outline:none}
+  .io-btns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .export-btn{background:transparent;border:1px solid var(--line2);color:var(--ink2);font-size:11px;padding:9px 6px;border-radius:8px;cursor:pointer;white-space:nowrap}
+  .export-btn:active{background:var(--line);color:var(--btc)}
+
+  .footer{text-align:center;font-size:10px;color:var(--ink4);padding:10px 0 20px;letter-spacing:0.05em;line-height:1.7}
+  .empty{padding:30px 20px;text-align:center;color:var(--ink3);font-size:13px}
+
+  .toast{position:fixed;bottom:calc(env(safe-area-inset-bottom) + 84px);left:50%;transform:translateX(-50%) translateY(160px);background:var(--line);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;border:1px solid var(--btc);transition:transform 0.3s,opacity 0.3s;opacity:0;pointer-events:none;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.4);white-space:nowrap}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+  /* Privacy mode: blur anything that reveals holdings */
+  body.private .sens{filter:blur(8px);user-select:none}
+  body.private .sens-chart canvas{filter:blur(10px)}
+  .sens,.sens-chart canvas{transition:filter .2s}
+
   .file-input-hidden{display:none}
 </style>
 </head>
@@ -200,189 +288,273 @@
       <div class="brand-sub" id="lastUpdated">Loading…</div>
     </div>
   </div>
-  <button class="refresh-btn" id="refreshBtn" onclick="fetchPrice(true)">↻</button>
-</div>
-
-<div class="live-price-card">
-  <div class="live-price-label"><span class="live-dot"></span>LIVE BTC PRICE</div>
-  <div class="live-price-value" id="livePrice">—</div>
-  <div class="live-price-meta" id="liveMeta"></div>
-</div>
-
-<div class="stats-grid">
-  <div class="stat">
-    <div class="stat-label">Total Invested</div>
-    <div class="stat-value" id="totalSpent">—</div>
-    <div class="stat-sub" id="buyCount">— buys</div>
-  </div>
-  <div class="stat highlight">
-    <div class="stat-label">Total BTC</div>
-    <div class="stat-value" id="totalBtc">—</div>
-    <div class="stat-sub">accumulated</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">DCA Avg Price</div>
-    <div class="stat-value" id="dcaAvg">—</div>
-    <div class="stat-sub">your cost basis</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">Current Value</div>
-    <div class="stat-value" id="currentValue">—</div>
-    <div class="stat-sub" id="valueSub">live</div>
+  <div class="head-btns">
+    <button class="icon-btn" id="privacyBtn" onclick="togglePrivacy()" aria-label="Hide amounts" title="Hide amounts">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+    <button class="icon-btn" id="refreshBtn" onclick="refreshAll()" aria-label="Refresh">↻</button>
+    <button class="icon-btn add" onclick="openAddForm()" aria-label="Add purchase">+</button>
   </div>
 </div>
 
-<div class="pnl-card">
-  <div>
-    <div class="pnl-label">Profit / Loss</div>
-    <div class="pnl-value" id="pnlValue">—</div>
+<!-- ═════════════ STACK ═════════════ -->
+<section class="view" id="view-stack">
+  <div class="live-price-card">
+    <div class="live-top">
+      <div>
+        <div class="live-price-label"><span class="live-dot" id="liveDot"></span>LIVE BTC PRICE</div>
+        <div class="live-price-value" id="livePrice">—</div>
+      </div>
+      <div class="live-spark" id="liveSpark"></div>
+    </div>
+    <div class="chg-row" id="chgRow"></div>
+    <div class="range24" id="range24">
+      <div class="range-bar"><div class="range-fill" id="rangeFill"></div><div class="range-mark" id="rangeMark"></div></div>
+      <div class="range-lbl"><span id="rangeLow">—</span><span>24H RANGE</span><span id="rangeHigh">—</span></div>
+    </div>
+    <div class="live-price-meta" id="liveMeta"></div>
   </div>
-  <div style="text-align:right">
-    <div class="pnl-label">Return</div>
-    <div class="pnl-pct" id="pnlPct">—</div>
-  </div>
-</div>
 
-<div class="last-buy-strip" id="lastBuyStrip" style="display:none">
-  <span>LAST BUY <strong id="daysSince">—</strong> DAYS AGO</span>
-  <span id="streakInfo"></span>
-</div>
+  <div class="stats-grid">
+    <div class="stat">
+      <div class="stat-label">Total Invested</div>
+      <div class="stat-value sens" id="totalSpent">—</div>
+      <div class="stat-sub" id="buyCount">— buys</div>
+    </div>
+    <div class="stat highlight">
+      <div class="stat-label">Total BTC</div>
+      <div class="stat-value sens" id="totalBtc">—</div>
+      <div class="stat-sub sens" id="totalSats">— sats</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">DCA Avg Price</div>
+      <div class="stat-value" id="dcaAvg">—</div>
+      <div class="stat-sub">your cost basis</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Current Value</div>
+      <div class="stat-value sens" id="currentValue">—</div>
+      <div class="stat-sub" id="valueSub">live</div>
+    </div>
+  </div>
 
-<div class="dca-strip" id="dcaStrip" style="display:none">
-  <div class="dca-cell">
-    <div class="dca-k">Sats / £ (lifetime)</div>
-    <div class="dca-v" id="satsPerGbp">—</div>
-  </div>
-  <div class="dca-cell">
-    <div class="dca-k">Last 4 buys avg</div>
-    <div class="dca-v" id="satsRecent">—</div>
-  </div>
-  <div class="dca-cell">
-    <div class="dca-k">Buying vs avg</div>
-    <div class="dca-v" id="buyingEff">—</div>
-  </div>
-</div>
-
-<div class="chart-card">
-  <div class="chart-title">
-    <span>Performance</span>
-  </div>
-  <div class="chart-tabs">
-    <button class="chart-tab active" data-chart="value" onclick="switchChart('value')">Value</button>
-    <button class="chart-tab" data-chart="buys" onclick="switchChart('buys')">Buys</button>
-    <button class="chart-tab" data-chart="dca" onclick="switchChart('dca')">Price vs DCA</button>
-  </div>
-  <div class="chart-sub" id="chartSub">Portfolio value vs cost basis</div>
-  <div class="chart-wrap">
-    <canvas id="mainChart"></canvas>
-  </div>
-</div>
-
-<div class="proj-card">
-  <div class="proj-head">
+  <div class="pnl-card">
     <div>
-      <div class="proj-title">Power Law Projection</div>
+      <div class="pnl-label">Profit / Loss</div>
+      <div class="pnl-value sens" id="pnlValue">—</div>
     </div>
-    <span class="proj-info" onclick="toggleProjInfo()">ⓘ</span>
-  </div>
-  <div class="proj-info-box" id="projInfoBox">
-    The <strong>Bitcoin Power Law</strong> (Santostasi/Burger) models BTC's long-term price as a power function of time. Historically it has roughly bounded BTC's price corridor — but it's a heuristic, not a guarantee. The model could break. Use this as a thought exercise, not a forecast.
-  </div>
-  <div class="year-tabs" id="yearTabs"></div>
-
-  <div class="scenario bear">
-    <span class="scenario-tag">Bear</span>
-    <span class="scenario-price" id="bearPrice">—</span>
-    <span class="scenario-stack" id="bearStack">—</span>
-  </div>
-  <div class="scenario base">
-    <span class="scenario-tag">Base</span>
-    <span class="scenario-price" id="basePrice">—</span>
-    <span class="scenario-stack" id="baseStack">—</span>
-  </div>
-  <div class="scenario bull">
-    <span class="scenario-tag">Bull</span>
-    <span class="scenario-price" id="bullPrice">—</span>
-    <span class="scenario-stack" id="bullStack">—</span>
-  </div>
-
-  <div class="future-stack">
-    <div class="proj-title" style="margin-bottom:10px">If You Keep Buying</div>
-    <div class="future-row">
-      <label>Weekly buy (£)</label>
-      <input type="number" id="futureWeekly" value="25" min="0" step="1" inputmode="decimal">
-    </div>
-    <div class="future-result">
-      <div class="future-result-line">
-        <span class="future-label">Extra £ invested by then</span>
-        <span class="future-value" id="futureInvested">—</span>
-      </div>
-      <div class="future-result-line">
-        <span class="future-label">Extra BTC accumulated</span>
-        <span class="future-value highlight" id="futureBtc">—</span>
-      </div>
-      <div class="future-result-line total">
-        <span class="future-label">Projected stack value (base)</span>
-        <span class="future-value highlight" id="futureStack">—</span>
-      </div>
+    <div style="text-align:right">
+      <div class="pnl-label">Return</div>
+      <div class="pnl-pct" id="pnlPct">—</div>
+      <div class="stat-sub" id="pnlToday"></div>
     </div>
   </div>
 
-  <div class="proj-disclaimer">Model uses central trend, support, and resistance bands. Not financial advice.</div>
-</div>
+  <div class="last-buy-strip" id="lastBuyStrip" style="display:none">
+    <span>LAST BUY <strong id="daysSince">—</strong> DAYS AGO</span>
+    <span id="streakInfo"></span>
+  </div>
 
-<button class="add-btn" id="addBtn" onclick="toggleForm()">+ Add Purchase</button>
+  <div class="card" id="goalCard">
+    <div class="card-head">
+      <div class="card-title">Stack Goal</div>
+      <button class="text-btn" onclick="toggleGoalEdit()">✎ Edit</button>
+    </div>
+    <div class="goal-edit" id="goalEdit">
+      <input class="field sm" type="number" id="goalInput" step="0.001" min="0.0001" inputmode="decimal" placeholder="Goal in BTC, e.g. 0.1">
+      <button class="text-btn primary" onclick="saveGoal()">Save</button>
+    </div>
+    <div class="goal-big">
+      <div class="goal-pct" id="goalPct">—</div>
+      <div class="goal-of sens" id="goalOf">—</div>
+    </div>
+    <div class="goal-bar" id="goalBar"><div class="goal-fill" id="goalFill" style="width:0"></div></div>
+    <div class="goal-lines">
+      <div class="goal-line"><span>Still to stack</span><span class="sens" id="goalLeft">—</span></div>
+      <div class="goal-line"><span id="goalPaceLbl">Your recent pace</span><span id="goalPace">—</span></div>
+      <div class="goal-line"><span>Projected to hit goal</span><span id="goalEta">—</span></div>
+      <div class="goal-line"><span id="msLbl">Next milestone</span><span class="sens" id="msVal">—</span></div>
+    </div>
+  </div>
 
-<div class="add-form" id="addForm">
-  <div class="form-title" id="formTitle">New Purchase</div>
-  <div class="form-row">
-    <label>Date</label>
-    <input type="date" id="formDate">
+  <div class="dca-strip" id="dcaStrip" style="display:none">
+    <div class="dca-cell"><div class="dca-k">Sats / £ (lifetime)</div><div class="dca-v" id="satsPerGbp">—</div></div>
+    <div class="dca-cell"><div class="dca-k">Last 4 buys avg</div><div class="dca-v" id="satsRecent">—</div></div>
+    <div class="dca-cell"><div class="dca-k">Buying vs avg</div><div class="dca-v" id="buyingEff">—</div></div>
   </div>
-  <div class="form-row">
-    <label>Cost (£)</label>
-    <input type="number" id="formCost" step="0.01" placeholder="e.g. 25.00" inputmode="decimal">
-  </div>
-  <div class="form-row">
-    <label>BTC Price at Time (£)</label>
-    <input type="number" id="formPrice" step="0.01" placeholder="e.g. 78500" inputmode="decimal">
-  </div>
-  <div class="auto-calc-note">BTC amount auto-fills from cost ÷ price. Override it to enter the actual amount Strike credited you (after their fee).</div>
-  <div class="form-row">
-    <label>BTC Amount <span id="btcModeTag" style="color:#f7931a;font-size:10px;margin-left:6px">AUTO</span></label>
-    <input type="number" id="formBtc" step="0.00000001" placeholder="0.00000000" inputmode="decimal">
-  </div>
-  <div class="form-actions">
-    <button class="btn-cancel" onclick="toggleForm()">Cancel</button>
-    <button class="btn-save" id="formSaveBtn" onclick="savePurchase()">Save Purchase</button>
-  </div>
-</div>
 
-<div class="yearly-card" id="yearlyCard">
-  <div class="yearly-head" onclick="toggleYearly()">
-    <div class="proj-title">Yearly Summary</div>
-    <span class="chev">▼</span>
-  </div>
-  <div class="yearly-body" id="yearlyBody"></div>
-</div>
-
-<div class="history-card">
-  <div class="history-header">
-    <div class="history-title">Purchase History</div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <div class="io-btns">
-        <button class="export-btn" onclick="document.getElementById('csvImport').click()">⤴ Import</button>
-        <button class="export-btn" onclick="exportCSV()">⤓ CSV</button>
-        <button class="export-btn" onclick="exportBackup()">⤓ Backup</button>
-        <button class="export-btn" onclick="restoreBackup()">↺ Restore</button>
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">Performance</div>
+      <div class="seg small" id="rangeSeg">
+        <button data-range="90">3M</button><button data-range="180">6M</button><button data-range="365">1Y</button><button data-range="all">All</button>
       </div>
+    </div>
+    <div class="seg" id="chartSeg">
+      <button data-chart="value">Value</button>
+      <button data-chart="pnl">P&amp;L</button>
+      <button data-chart="buys">Buys</button>
+      <button data-chart="dca">Avg cost</button>
+      <button data-chart="sats">Sats</button>
+    </div>
+    <div class="chart-sub" id="chartSub"></div>
+    <div class="chart-wrap sens-chart" id="mainWrap"><canvas id="mainChart"></canvas></div>
+  </div>
+</section>
+
+<!-- ═════════════ INSIGHTS ═════════════ -->
+<section class="view" id="view-insights">
+  <div class="card">
+    <div class="card-head"><div class="card-title">Returns</div></div>
+    <div class="tiles" id="returnTiles"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="card-title">Consistency</div><span class="card-note" id="heatRange"></span></div>
+    <div class="streaks" id="streaks"></div>
+    <div class="heat" id="heatmap"></div>
+    <div class="heat-legend">No buy <i style="background:#1a1a24"></i><i style="background:rgba(247,147,26,0.3)"></i><i style="background:rgba(247,147,26,0.55)"></i><i style="background:rgba(247,147,26,0.8)"></i><i style="background:#ffb347"></i> Bigger</div>
+    <div class="heat-detail" id="heatDetail">Tap a week for details</div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">Monthly</div>
+    </div>
+    <div class="seg" id="monthlySeg">
+      <button data-m="invested">£ Invested</button>
+      <button data-m="sats">Sats stacked</button>
+      <button data-m="avg">Avg price</button>
+    </div>
+    <div class="chart-sub" id="monthlySub"></div>
+    <div class="chart-wrap sens-chart" id="monthlyWrap"><canvas id="monthlyChart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="card-title">Yearly Summary</div></div>
+    <div id="yearlyBody"></div>
+  </div>
+</section>
+
+<!-- ═════════════ MARKET ═════════════ -->
+<section class="view" id="view-market">
+  <div class="card">
+    <div class="card-head"><div class="card-title">Market</div><span class="card-note" id="mktUpdated"></span></div>
+    <div class="tiles" id="marketTiles"></div>
+  </div>
+
+  <div class="card" id="fngCard">
+    <div class="card-head"><div class="card-title">Fear &amp; Greed Index</div><span class="card-note">alternative.me</span></div>
+    <div id="fngBody"><div class="empty">Loading…</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="card-title">Network</div><span class="card-note">mempool.space</span></div>
+    <div id="netBody"><div class="empty">Loading…</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">Power Law Projection</div>
+      <span class="proj-info" onclick="toggleProjInfo()">ⓘ</span>
+    </div>
+    <div class="proj-info-box" id="projInfoBox">
+      The <strong>Bitcoin Power Law</strong> (Santostasi/Burger) models BTC's long-term price as a power function of time. Historically it has roughly bounded BTC's price corridor — but it's a heuristic, not a guarantee. The model could break. Use this as a thought exercise, not a forecast.
+    </div>
+    <div class="seg year-tabs" id="yearTabs"></div>
+    <div class="chart-sub" id="corridorSub">Price inside the power-law corridor (log scale)</div>
+    <div class="chart-wrap tall" style="margin-bottom:14px"><canvas id="corridorChart"></canvas></div>
+
+    <div class="scenario bear"><span class="scenario-tag">Bear</span><span class="scenario-price" id="bearPrice">—</span><span class="scenario-stack sens" id="bearStack">—</span></div>
+    <div class="scenario base"><span class="scenario-tag">Base</span><span class="scenario-price" id="basePrice">—</span><span class="scenario-stack sens" id="baseStack">—</span></div>
+    <div class="scenario bull"><span class="scenario-tag">Bull</span><span class="scenario-price" id="bullPrice">—</span><span class="scenario-stack sens" id="bullStack">—</span></div>
+
+    <div class="future-stack">
+      <div class="card-title" style="margin-bottom:10px">If You Keep Buying</div>
+      <div class="future-row">
+        <label for="futureWeekly">Weekly buy (£)</label>
+        <input type="number" id="futureWeekly" value="25" min="0" step="1" inputmode="decimal">
+      </div>
+      <div class="future-result">
+        <div class="future-result-line"><span class="future-label">Extra £ invested by then</span><span class="future-value" id="futureInvested">—</span></div>
+        <div class="future-result-line"><span class="future-label">Extra BTC accumulated</span><span class="future-value highlight" id="futureBtc">—</span></div>
+        <div class="future-result-line"><span class="future-label">Total stack by then</span><span class="future-value highlight sens" id="futureTotalBtc">—</span></div>
+        <div class="future-result-line"><span class="future-label">Value · bear / bull</span><span class="future-value sens" id="futureRange">—</span></div>
+        <div class="future-result-line total"><span class="future-label">Projected stack value (base)</span><span class="future-value highlight sens" id="futureStack">—</span></div>
+      </div>
+    </div>
+    <div class="proj-disclaimer">Model uses central trend, support (×0.42) and resistance (×3) bands. Not financial advice.</div>
+  </div>
+</section>
+
+<!-- ═════════════ HISTORY ═════════════ -->
+<section class="view" id="view-history">
+  <button class="add-btn" id="addBtn" onclick="toggleForm()">+ Add Purchase</button>
+
+  <div class="add-form" id="addForm">
+    <div class="form-title" id="formTitle">New Purchase</div>
+    <div class="form-row"><label for="formDate">Date</label><input type="date" id="formDate"></div>
+    <div class="form-row"><label for="formCost">Cost (£)</label><input type="number" id="formCost" step="0.01" placeholder="e.g. 25.00" inputmode="decimal"></div>
+    <div class="form-row"><label for="formPrice">BTC Price at Time (£)</label><input type="number" id="formPrice" step="0.01" placeholder="e.g. 78500" inputmode="decimal"></div>
+    <div class="auto-calc-note">BTC amount auto-fills from cost ÷ price. Override it to enter the actual amount Strike credited you (after their fee).</div>
+    <div class="form-row">
+      <label for="formBtc">BTC Amount <span id="btcModeTag" style="color:#f7931a;font-size:10px;margin-left:6px">AUTO</span></label>
+      <input type="number" id="formBtc" step="0.00000001" placeholder="0.00000000" inputmode="decimal">
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="toggleForm()">Cancel</button>
+      <button class="btn-save" id="formSaveBtn" onclick="savePurchase()">Save Purchase</button>
+    </div>
+  </div>
+
+  <div class="history-card">
+    <div class="history-header">
+      <div class="card-title">Purchase History</div>
       <div class="history-count" id="histCount"></div>
     </div>
+    <div class="history-tools">
+      <span class="card-note" id="histSummary"></span>
+      <select class="sort" id="histSort" aria-label="Sort purchases">
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
+        <option value="best">Best return</option>
+        <option value="worst">Worst return</option>
+        <option value="largest">Largest buy</option>
+      </select>
+    </div>
+    <div class="history-list" id="histList"></div>
   </div>
-  <div class="history-list" id="histList"></div>
-</div>
 
-<div class="footer">DATA STORED LOCALLY ON THIS DEVICE</div>
+  <div class="card">
+    <div class="card-head"><div class="card-title">Your Data</div></div>
+    <div class="io-btns">
+      <button class="export-btn" onclick="document.getElementById('csvImport').click()">⤴ Import</button>
+      <button class="export-btn" onclick="exportCSV()">⤓ CSV</button>
+      <button class="export-btn" onclick="exportBackup()">⤓ Backup</button>
+      <button class="export-btn" onclick="restoreBackup()">↺ Restore</button>
+    </div>
+    <div class="card-note" style="margin-top:10px">Import accepts this app's CSV/JSON backups and most exchange CSVs. Deletes and imports take an automatic snapshot you can undo with Restore.</div>
+  </div>
+</section>
+
+<div class="footer">DATA STORED LOCALLY ON THIS DEVICE<br>Prices: CoinGecko · Coinbase · Sentiment: alternative.me · Network: mempool.space</div>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <button class="nav-btn" data-view="stack" onclick="setView('stack')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>Stack
+    </button>
+    <button class="nav-btn" data-view="insights" onclick="setView('insights')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-6"/></svg>Insights
+    </button>
+    <button class="nav-btn" data-view="market" onclick="setView('market')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></svg>Market
+    </button>
+    <button class="nav-btn" data-view="history" onclick="setView('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>History
+    </button>
+  </div>
+</nav>
 
 <div class="toast" id="toast"></div>
 
@@ -474,15 +646,36 @@ const STORAGE_KEY = "btc_stack_purchases_v1";
 const PRICE_CACHE_KEY = "btc_stack_price_v1";
 const BACKUP_KEY = "btc_stack_backup_v1";      // rolling safety snapshot before any destructive write
 const RATE_CACHE_KEY = "btc_stack_usdgbp_v1";  // last known USD→GBP rate
+const HISTORY_KEY = "btc_stack_history_v2";    // daily BTC/GBP closes
+const SETTINGS_KEY = "btc_stack_settings_v1";  // goal, view, chart choices, privacy
+const FNG_KEY = "btc_stack_fng_v1";
+const NET_KEY = "btc_stack_net_v1";
+
+const DAY = 86400000;
+const CG = "https://api.coingecko.com/api/v3";
 
 let purchases = [];
 let livePrice = null;
 let liveUsdPrice = null;
-let chart = null;
-let currentChartType = "value";
+let market = null;       // extra market stats from CoinGecko (changes, ATH, market cap…)
+let priceHistory = null; // [{t: ms, p: gbp}] daily
+let fng = null;          // [{v, cls, t}] newest first
+let net = null;          // mempool.space snapshot
+let charts = {};
 let pendingDeleteId = null;
 let projYear = null;
 let editingId = null;
+let selectedWeek = null;
+
+const DEFAULT_SETTINGS = {goalBtc: 0.1, weekly: 25, privacy: false, view: "stack", chart: "value", range: "all", monthly: "invested", sort: "newest"};
+let settings = {...DEFAULT_SETTINGS};
+
+// ── STORAGE ─────────────────────────────
+function lsGet(key) { try { return JSON.parse(localStorage.getItem(key)); } catch(e) { return null; } }
+function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} }
+
+function loadSettings() { settings = {...DEFAULT_SETTINGS, ...(lsGet(SETTINGS_KEY) || {})}; }
+function saveSettings() { lsSet(SETTINGS_KEY, settings); }
 
 function loadPurchases() {
   try {
@@ -504,10 +697,7 @@ function savePurchases(snapshotFirst = false) {
     if (snapshotFirst) {
       const existing = localStorage.getItem(STORAGE_KEY);
       if (existing) {
-        localStorage.setItem(BACKUP_KEY, JSON.stringify({
-          data: existing,
-          savedAt: Date.now()
-        }));
+        localStorage.setItem(BACKUP_KEY, JSON.stringify({data: existing, savedAt: Date.now()}));
       }
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(purchases));
@@ -522,10 +712,7 @@ function restoreBackup() {
     if (!raw) { showToast("No backup available"); return; }
     const backup = JSON.parse(raw);
     const restored = JSON.parse(backup.data);
-    if (!Array.isArray(restored) || restored.length === 0) {
-      showToast("Backup was empty");
-      return;
-    }
+    if (!Array.isArray(restored) || restored.length === 0) { showToast("Backup was empty"); return; }
     const when = new Date(backup.savedAt).toLocaleString("en-GB", {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
     if (confirm(`Restore ${restored.length} purchases from backup taken ${when}? This replaces your current list.`)) {
       purchases = restored;
@@ -540,111 +727,226 @@ function restoreBackup() {
 
 // Download a JSON snapshot — a full, re-importable backup (belt and braces vs CSV).
 function exportBackup() {
-  const payload = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    purchases: [...purchases].sort((a,b)=>a.date.localeCompare(b.date))
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: "application/json"});
+  const payload = {version: 1, exportedAt: new Date().toISOString(), purchases: buysAsc().map(({id, ...p}) => p)};
+  download(`btc_backup_${todayISO()}.json`, JSON.stringify(payload, null, 2), "application/json");
+  showToast("Backup saved");
+}
+
+function download(name, text, type) {
+  const blob = new Blob([text], {type});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `btc_backup_${new Date().toISOString().split("T")[0]}.json`;
+  a.download = name;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast("Backup saved");
 }
 
+// ── FORMATTING ─────────────────────────────
 function fmtGBP(n, dec=2) {
   if (n === null || n === undefined || isNaN(n)) return "—";
-  return "£" + n.toLocaleString("en-GB", {minimumFractionDigits: dec, maximumFractionDigits: dec});
+  const s = Math.abs(n).toLocaleString("en-GB", {minimumFractionDigits: dec, maximumFractionDigits: dec});
+  return (n < 0 ? "-£" : "£") + s;
 }
-
-function fmtBTC(n) {
-  return "₿ " + n.toFixed(8);
+function fmtSignedGBP(n, dec=2) { return n === null || isNaN(n) ? "—" : (n >= 0 ? "+" : "") + fmtGBP(n, dec); }
+function fmtCompactGBP(n) {
+  if (n === null || n === undefined || isNaN(n)) return "—";
+  const a = Math.abs(n);
+  if (a >= 1e12) return "£" + (n/1e12).toFixed(2) + "T";
+  if (a >= 1e9) return "£" + (n/1e9).toFixed(1) + "B";
+  if (a >= 1e6) return "£" + (n/1e6).toFixed(2) + "M";
+  if (a >= 1e4) return "£" + (n/1e3).toFixed(0) + "k";
+  return fmtGBP(n, 0);
 }
+function fmtAxisGBP(v) {
+  const a = Math.abs(v);
+  if (a >= 1e6) return (v < 0 ? "-£" : "£") + +(a/1e6).toFixed(1) + "M";
+  if (a >= 1000) return (v < 0 ? "-£" : "£") + +(a/1000).toFixed(a >= 1e4 ? 0 : 1) + "k";
+  return (v < 0 ? "-£" : "£") + a.toFixed(0);
+}
+function fmtBTC(n) { return "₿ " + n.toFixed(8); }
+function fmtSats(btc) { return Math.round(btc * 1e8).toLocaleString("en-GB"); }
+function fmtSatsShort(sats) {
+  if (sats >= 1e6) return +(sats/1e6).toFixed(sats >= 1e7 ? 1 : 2) + "M";
+  if (sats >= 1e3) return +(sats/1e3).toFixed(0) + "k";
+  return String(Math.round(sats));
+}
+function fmtPct(n, dec=1) { return n === null || n === undefined || isNaN(n) ? "—" : (n >= 0 ? "+" : "") + n.toFixed(dec) + "%"; }
+function fmtDate(ms, opts = {day:"numeric", month:"short", year:"numeric"}) { return new Date(ms).toLocaleDateString("en-GB", opts); }
+function todayISO() { return new Date().toISOString().split("T")[0]; }
+function cls(n) { return n >= 0 ? "pos" : "neg"; }
 
 function showToast(msg) {
   const t = document.getElementById("toast");
   t.textContent = msg;
   t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2400);
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove("show"), 2400);
+}
+
+// ── NETWORK: PRICE + MARKET DATA ─────────────────────────────
+async function fetchJSON(url, timeoutMs = 12000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {signal: ctrl.signal});
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return await res.json();
+  } finally { clearTimeout(timer); }
+}
+
+function setUpdatedLabel(ts) {
+  const el = document.getElementById("lastUpdated");
+  const age = Date.now() - ts;
+  el.textContent = (age > 15 * 60000 ? "Last price " : "Updated ") + new Date(ts).toLocaleTimeString("en-GB", {hour:"2-digit", minute:"2-digit"});
+  document.getElementById("liveDot").classList.toggle("stale", age > 15 * 60000);
 }
 
 async function fetchPrice(manual = false) {
-  const btn = document.getElementById("refreshBtn");
-  btn.classList.add("spinning");
+  let ok = false;
+  // Rich endpoint: price + % changes + ATH + 24h range + market cap in one call
+  try {
+    const d = await fetchJSON(`${CG}/coins/bitcoin?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false`);
+    const m = d?.market_data;
+    if (m?.current_price?.gbp) {
+      livePrice = m.current_price.gbp;
+      liveUsdPrice = m.current_price.usd || null;
+      market = {
+        chg24: m.price_change_percentage_24h_in_currency?.gbp ?? null,
+        chg7: m.price_change_percentage_7d_in_currency?.gbp ?? null,
+        chg30: m.price_change_percentage_30d_in_currency?.gbp ?? null,
+        chg1y: m.price_change_percentage_1y_in_currency?.gbp ?? null,
+        high24: m.high_24h?.gbp ?? null, low24: m.low_24h?.gbp ?? null,
+        ath: m.ath?.gbp ?? null, athDate: m.ath_date?.gbp ?? null, athChg: m.ath_change_percentage?.gbp ?? null,
+        mcap: m.market_cap?.gbp ?? null, vol: m.total_volume?.gbp ?? null,
+        supply: m.circulating_supply ?? null
+      };
+      ok = true;
+    }
+  } catch(e) {}
 
-  // Try cached first to avoid flash of empty
-  if (!manual) {
+  // Lightweight fallback
+  if (!ok) {
     try {
-      const cached = JSON.parse(localStorage.getItem(PRICE_CACHE_KEY));
-      if (cached && Date.now() - cached.ts < 5 * 60 * 1000) {
-        livePrice = cached.price;
-        liveUsdPrice = cached.usd || null;
-        render();
+      const d = await fetchJSON(`${CG}/simple/price?ids=bitcoin&vs_currencies=gbp,usd&include_24hr_change=true&include_market_cap=true`);
+      if (d?.bitcoin?.gbp) {
+        livePrice = d.bitcoin.gbp;
+        liveUsdPrice = d.bitcoin.usd || null;
+        market = {...(market || {}), chg24: d.bitcoin.gbp_24h_change ?? null, mcap: d.bitcoin.gbp_market_cap ?? null};
+        ok = true;
       }
     } catch(e) {}
   }
 
-  try {
-    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=gbp,usd");
-    const data = await res.json();
-    if (data?.bitcoin?.gbp) {
-      livePrice = data.bitcoin.gbp;
-      liveUsdPrice = data.bitcoin.usd || null;
-      localStorage.setItem(PRICE_CACHE_KEY, JSON.stringify({price: livePrice, usd: liveUsdPrice, ts: Date.now()}));
-      document.getElementById("lastUpdated").textContent = "Updated " + new Date().toLocaleTimeString("en-GB", {hour:"2-digit", minute:"2-digit"});
-      if (manual) showToast("Price updated");
-    }
-  } catch(e) {
-    if (manual) showToast("Couldn't fetch price — using last known");
+  if (ok) {
+    const ts = Date.now();
+    lsSet(PRICE_CACHE_KEY, {price: livePrice, usd: liveUsdPrice, market, ts});
+    setUpdatedLabel(ts);
+    if (manual) showToast("Price updated");
+  } else if (manual) {
+    showToast("Couldn't fetch price — using last known");
   }
-
-  setTimeout(() => btn.classList.remove("spinning"), 400);
   render();
 }
 
-// ── HISTORICAL PRICE HISTORY ─────────────────────────────
-// Fetches daily BTC/GBP history so charts can show what BTC actually did
-// between your buys — not just straight lines connecting purchase prices.
-// Cached in localStorage and refreshed at most once/day to respect rate limits.
-const HISTORY_KEY = "btc_stack_history_v1";
-let priceHistory = null; // array of {t: ms, p: gbp}
+// ── HISTORICAL PRICES ─────────────────────────────
+// Daily BTC/GBP closes so charts show what BTC actually did between buys.
+// Coinbase candles cover the full span (CoinGecko's free tier stops at 365 days);
+// CoinGecko is the fallback. Cached and refreshed at most every 12h.
+async function fetchCoinbaseHistory(startMs) {
+  const out = new Map();
+  let end = Date.now();
+  for (let i = 0; i < 8 && end > startMs; i++) {
+    const start = Math.max(startMs, end - 299 * DAY);
+    const rows = await fetchJSON(`https://api.exchange.coinbase.com/products/BTC-GBP/candles?granularity=86400&start=${new Date(start).toISOString()}&end=${new Date(end).toISOString()}`);
+    if (!Array.isArray(rows)) throw new Error("bad candles");
+    rows.forEach(r => out.set(r[0] * 1000, r[4])); // [time, low, high, open, close, volume]
+    end = start - DAY;
+  }
+  return [...out].map(([t, p]) => ({t, p})).sort((a, b) => a.t - b.t);
+}
 
-async function loadHistory() {
-  // Serve cache immediately if fresh (< 20h old)
+async function fetchCoinGeckoHistory(startMs) {
+  const days = Math.min(365, Math.max(2, Math.ceil((Date.now() - startMs) / DAY)));
+  const d = await fetchJSON(`${CG}/coins/bitcoin/market_chart?vs_currency=gbp&days=${days}&interval=daily`);
+  return (d?.prices || []).map(([t, p]) => ({t, p}));
+}
+
+async function loadHistory(force = false) {
+  const cached = lsGet(HISTORY_KEY);
+  if (cached?.data?.length) { priceHistory = cached.data; renderActiveCharts(); }
+
+  const buys = buysAsc();
+  const firstMs = buys.length ? buys[0].t : Date.now();
+  const wantFrom = Math.min(firstMs - 7 * DAY, Date.now() - 400 * DAY);
+  const stale = !cached || Date.now() - cached.ts > 12 * 3600 * 1000;
+  const short = cached && cached.from > wantFrom + 2 * DAY && Date.now() - cached.ts > 3600 * 1000;
+  if (!force && !stale && !short) return;
+
+  let data = null;
+  try { data = await fetchCoinbaseHistory(wantFrom); } catch(e) {}
+  if (!data || data.length < 30) {
+    try { data = await fetchCoinGeckoHistory(wantFrom); } catch(e) {}
+  }
+  if (data && data.length > 1) {
+    priceHistory = data;
+    lsSet(HISTORY_KEY, {data, ts: Date.now(), from: data[0].t});
+    render();
+  }
+}
+
+// ── SENTIMENT + NETWORK ─────────────────────────────
+async function loadFng(force = false) {
+  const cached = lsGet(FNG_KEY);
+  if (cached?.data) { fng = cached.data; renderMarket(); }
+  if (!force && cached && Date.now() - cached.ts < 3 * 3600 * 1000) return;
   try {
-    const cached = JSON.parse(localStorage.getItem(HISTORY_KEY));
-    if (cached && cached.data && Date.now() - cached.ts < 20 * 3600 * 1000) {
-      priceHistory = cached.data;
-      renderChart();
+    const d = await fetchJSON("https://api.alternative.me/fng/?limit=31");
+    if (Array.isArray(d?.data) && d.data.length) {
+      fng = d.data.map(x => ({v: +x.value, cls: x.value_classification, t: +x.timestamp * 1000}));
+      lsSet(FNG_KEY, {data: fng, ts: Date.now()});
+      renderMarket();
     }
   } catch(e) {}
+}
 
-  // Only hit the network if we have no data or it's stale
-  const needsFetch = !priceHistory || (() => {
-    try { const c = JSON.parse(localStorage.getItem(HISTORY_KEY)); return !c || Date.now() - c.ts >= 20 * 3600 * 1000; }
-    catch(e) { return true; }
-  })();
-  if (!needsFetch) return;
-
-  try {
-    // Span from first purchase to today (capped at 365d for the free endpoint's daily granularity)
-    const firstMs = purchases.length ? new Date([...purchases].sort((a,b)=>a.date.localeCompare(b.date))[0].date).getTime() : Date.now() - 365*86400000;
-    const days = Math.min(365, Math.max(1, Math.ceil((Date.now() - firstMs) / 86400000)));
-    const res = await fetch(`https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=gbp&days=${days}&interval=daily`);
-    const data = await res.json();
-    if (data?.prices?.length) {
-      priceHistory = data.prices.map(([t, p]) => ({t, p}));
-      localStorage.setItem(HISTORY_KEY, JSON.stringify({data: priceHistory, ts: Date.now()}));
-      renderChart();
-    }
-  } catch(e) {
-    // Silent — charts fall back to buy-price-only mode if history unavailable
+async function loadNetwork(force = false) {
+  const cached = lsGet(NET_KEY);
+  if (cached?.data) { net = cached.data; renderMarket(); }
+  if (!force && cached && Date.now() - cached.ts < 10 * 60 * 1000) return;
+  const base = "https://mempool.space/api";
+  const [height, fees, diff, hash] = await Promise.allSettled([
+    fetch(`${base}/blocks/tip/height`).then(r => r.ok ? r.text() : Promise.reject()),
+    fetchJSON(`${base}/v1/fees/recommended`),
+    fetchJSON(`${base}/v1/difficulty-adjustment`),
+    fetchJSON(`${base}/v1/mining/hashrate/3d`)
+  ]);
+  const next = {...(net || {})};
+  if (height.status === "fulfilled" && +height.value > 0) next.height = +height.value;
+  if (fees.status === "fulfilled") next.fees = fees.value;
+  if (diff.status === "fulfilled") next.diff = diff.value;
+  if (hash.status === "fulfilled") next.hashrate = hash.value?.currentHashrate ?? null;
+  if (next.height) {
+    net = next;
+    lsSet(NET_KEY, {data: net, ts: Date.now()});
+    renderMarket();
   }
+}
+
+async function refreshAll() {
+  const btn = document.getElementById("refreshBtn");
+  btn.classList.add("spinning");
+  await Promise.allSettled([fetchPrice(true), loadHistory(), loadFng(), loadNetwork(true)]);
+  setTimeout(() => btn.classList.remove("spinning"), 300);
+}
+
+// ── ANALYTICS ─────────────────────────────
+function buysAsc() {
+  return [...purchases]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(p => ({...p, t: new Date(p.date).getTime()}));
 }
 
 function computeStats() {
@@ -657,18 +959,141 @@ function computeStats() {
   return {totalSpent, totalBtc, dcaAvg, currentValue, pnl, pnlPct};
 }
 
+// Real daily prices, with your own buy prices filling any gap before the
+// fetched history starts, so the timeline always begins at your first buy.
+function getHistory() {
+  const buys = buysAsc();
+  const hist = priceHistory && priceHistory.length > 1 ? priceHistory : [];
+  const startT = hist.length ? hist[0].t : Infinity;
+  const pre = buys.filter(b => b.t < startT - DAY / 2).map(b => ({t: b.t, p: b.price}));
+  return [...pre, ...hist];
+}
+
+// Day-by-day stack: BTC held, £ in, and value at that day's real price.
+function buildTimeline() {
+  const buys = buysAsc();
+  if (!buys.length) return [];
+  const hist = getHistory().filter(h => h.t >= buys[0].t - DAY / 2);
+  const out = [];
+  let cumBtc = 0, cumCost = 0, bi = 0;
+  for (const {t, p} of hist) {
+    while (bi < buys.length && buys[bi].t <= t + DAY / 2) { cumBtc += buys[bi].btc; cumCost += buys[bi].cost; bi++; }
+    if (cumCost > 0) out.push({t, price: p, btc: cumBtc, cost: cumCost, value: cumBtc * p});
+  }
+  // Buys newer than the latest history point, then pin the end to the live price.
+  while (bi < buys.length) { cumBtc += buys[bi].btc; cumCost += buys[bi].cost; out.push({t: buys[bi].t, price: buys[bi].price, btc: cumBtc, cost: cumCost, value: cumBtc * buys[bi].price}); bi++; }
+  if (livePrice) out.push({t: Date.now(), price: livePrice, btc: cumBtc, cost: cumCost, value: cumBtc * livePrice});
+  return out;
+}
+
+function priceAt(ms) {
+  const h = getHistory();
+  if (!h.length) return null;
+  let best = null;
+  for (const pt of h) { if (pt.t <= ms + DAY / 2) best = pt; else break; }
+  return best && Math.abs(best.t - ms) < 4 * DAY ? best.p : null;
+}
+
+// Money-weighted annual return (XIRR) — accounts for *when* each £ went in.
+function xirr(flows) {
+  if (flows.length < 2) return null;
+  const t0 = flows[0].t;
+  const npv = r => flows.reduce((s, f) => s + f.v / Math.pow(1 + r, (f.t - t0) / (365.25 * DAY)), 0);
+  let lo = -0.99, hi = 20, flo = npv(lo), fhi = npv(hi);
+  if (isNaN(flo) || isNaN(fhi) || flo * fhi > 0) return null;
+  for (let i = 0; i < 200; i++) {
+    const mid = (lo + hi) / 2, fm = npv(mid);
+    if (Math.abs(fm) < 1e-7) return mid;
+    if (fm * flo > 0) { lo = mid; flo = fm; } else { hi = mid; }
+  }
+  return (lo + hi) / 2;
+}
+
+function weekStart(ms) {
+  const d = new Date(ms);
+  const dow = (d.getUTCDay() + 6) % 7; // Monday = 0
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - dow);
+}
+
+function buildWeeks() {
+  const buys = buysAsc();
+  if (!buys.length) return [];
+  const first = weekStart(buys[0].t), last = weekStart(Date.now());
+  const weeks = [];
+  for (let t = first; t <= last; t += 7 * DAY) weeks.push({t, cost: 0, btc: 0, count: 0});
+  buys.forEach(b => {
+    const i = Math.round((weekStart(b.t) - first) / (7 * DAY));
+    if (weeks[i]) { weeks[i].cost += b.cost; weeks[i].btc += b.btc; weeks[i].count++; }
+  });
+  return weeks;
+}
+
+function streakStats(weeks) {
+  let longest = 0, run = 0;
+  weeks.forEach(w => { run = w.count ? run + 1 : 0; longest = Math.max(longest, run); });
+  // Current streak: an in-progress week with no buy yet doesn't break it.
+  let i = weeks.length - 1, current = 0;
+  if (i >= 0 && !weeks[i].count) i--;
+  while (i >= 0 && weeks[i].count) { current++; i--; }
+  const hit = weeks.filter(w => w.count).length;
+  return {current, longest, hit, total: weeks.length};
+}
+
+// Recent weekly accumulation pace (BTC/week) over the last 12 weeks.
+function recentPace() {
+  const weeks = buildWeeks();
+  const recent = weeks.length > 12 ? weeks.slice(-13, -1) : weeks; // skip the in-progress week
+  if (!recent.length) return 0;
+  return recent.reduce((s, w) => s + w.btc, 0) / recent.length;
+}
+
+// ── RENDER ─────────────────────────────
 function render() {
+  renderStack();
+  renderInsights();
+  renderMarket();
+  renderProjection();
+  renderHistory();
+  renderActiveCharts();
+}
+
+function renderStack() {
   const s = computeStats();
 
-  // Live price
+  // Live price + changes
   document.getElementById("livePrice").textContent = livePrice ? fmtGBP(livePrice, 0) : "—";
+  const chg = {...(market || {})};
+  const pctFromHist = days => { const p = priceAt(Date.now() - days * DAY); return p && livePrice ? (livePrice / p - 1) * 100 : null; };
+  if (chg.chg7 == null) chg.chg7 = pctFromHist(7);
+  if (chg.chg30 == null) chg.chg30 = pctFromHist(30);
+  if (chg.chg1y == null) chg.chg1y = pctFromHist(365);
+  document.getElementById("chgRow").innerHTML = [["24h", chg.chg24], ["7d", chg.chg7], ["30d", chg.chg30], ["1y", chg.chg1y]]
+    .filter(([, v]) => v != null && !isNaN(v))
+    .map(([k, v]) => `<span class="chg ${cls(v)}">${k}<b>${fmtPct(v)}</b></span>`).join("");
+
+  // 24h range bar
+  const r24 = document.getElementById("range24");
+  if (livePrice && chg.high24 && chg.low24 && chg.high24 > chg.low24) {
+    const pos = Math.max(0, Math.min(1, (livePrice - chg.low24) / (chg.high24 - chg.low24))) * 100;
+    document.getElementById("rangeFill").style.width = pos + "%";
+    document.getElementById("rangeMark").style.left = pos + "%";
+    document.getElementById("rangeLow").textContent = fmtGBP(chg.low24, 0);
+    document.getElementById("rangeHigh").textContent = fmtGBP(chg.high24, 0);
+    r24.classList.add("show");
+  } else r24.classList.remove("show");
+
+  // 30-day sparkline
+  const hist = getHistory().filter(h => h.t >= Date.now() - 30 * DAY).map(h => h.p);
+  if (livePrice) hist.push(livePrice);
+  document.getElementById("liveSpark").innerHTML = hist.length > 2 ? sparkSVG(hist, hist[hist.length - 1] >= hist[0] ? "#3fb950" : "#f85149") : "";
+
   const meta = document.getElementById("liveMeta");
-  if (livePrice && s.dcaAvg > 0) {
-    const diff = ((livePrice - s.dcaAvg) / s.dcaAvg) * 100;
-    const cls = diff >= 0 ? "positive" : "negative";
-    const arrow = diff >= 0 ? "▲" : "▼";
-    let html = `<span>vs your avg ${fmtGBP(s.dcaAvg, 0)}</span><span class="${cls}">${arrow} ${Math.abs(diff).toFixed(1)}%</span>`;
-    // Power law deviation
+  if (livePrice) {
+    let html = "";
+    if (s.dcaAvg > 0) {
+      const diff = ((livePrice - s.dcaAvg) / s.dcaAvg) * 100;
+      html += `<span>vs your avg ${fmtGBP(s.dcaAvg, 0)}</span><span class="${diff >= 0 ? "positive" : "negative"}">${diff >= 0 ? "▲" : "▼"} ${Math.abs(diff).toFixed(1)}%</span>`;
+    }
     const plGbp = powerLawGBP(Date.now());
     if (plGbp > 0) {
       const plDev = ((livePrice - plGbp) / plGbp) * 100;
@@ -678,34 +1103,61 @@ function render() {
       else { badgeCls = "fair"; badgeText = "near trend"; }
       html += `<span class="pl-badge ${badgeCls}">${badgeText}</span>`;
     }
+    html += `<span class="muted">£1 = ${Math.round(1e8 / livePrice).toLocaleString("en-GB")} sats</span>`;
     meta.innerHTML = html;
+  } else meta.innerHTML = "";
+
+  // Stats
+  document.getElementById("totalSpent").textContent = fmtGBP(s.totalSpent);
+  document.getElementById("totalBtc").textContent = "₿ " + s.totalBtc.toFixed(8);
+  document.getElementById("totalSats").textContent = fmtSats(s.totalBtc) + " sats";
+  document.getElementById("dcaAvg").textContent = fmtGBP(s.dcaAvg, 0);
+  document.getElementById("currentValue").textContent = s.currentValue !== null ? fmtGBP(s.currentValue) : "—";
+  document.getElementById("buyCount").textContent = purchases.length + " buys";
+  const vs = document.getElementById("valueSub");
+  if (s.currentValue !== null && chg.chg24 != null) {
+    // What the stack did today (holdings × today's move)
+    const today = s.currentValue - s.currentValue / (1 + chg.chg24 / 100);
+    vs.innerHTML = `<span class="sens ${cls(today)}">${fmtSignedGBP(today)}</span> today`;
+  } else vs.textContent = "live";
+
+  // PnL
+  const pnlEl = document.getElementById("pnlValue");
+  const pctEl = document.getElementById("pnlPct");
+  if (s.pnl !== null) {
+    const c = s.pnl >= 0 ? "positive" : "negative";
+    pnlEl.textContent = fmtSignedGBP(s.pnl);
+    pnlEl.className = "pnl-value sens " + c;
+    pctEl.textContent = fmtPct(s.pnlPct, 2);
+    pctEl.className = "pnl-pct " + c;
   } else {
-    meta.innerHTML = "";
+    pnlEl.textContent = "—"; pctEl.textContent = "—";
+    pnlEl.className = "pnl-value sens"; pctEl.className = "pnl-pct";
   }
+  const buys = buysAsc();
+  const ann = buys.length && livePrice && Date.now() - buys[0].t > 90 * DAY
+    ? xirr([...buys.map(b => ({t: b.t, v: -b.cost})), {t: Date.now(), v: s.currentValue}]) : null;
+  document.getElementById("pnlToday").textContent = ann !== null ? fmtPct(ann * 100) + " / yr" : "";
 
   // Days since last buy
   const lastBuyStrip = document.getElementById("lastBuyStrip");
-  if (purchases.length > 0) {
-    const lastDate = [...purchases].sort((a, b) => b.date.localeCompare(a.date))[0].date;
-    const daysSince = Math.floor((Date.now() - new Date(lastDate).getTime()) / 86400000);
+  if (buys.length > 0) {
+    const daysSince = Math.floor((Date.now() - buys[buys.length - 1].t) / DAY);
     document.getElementById("daysSince").textContent = daysSince;
     const streak = document.getElementById("streakInfo");
     if (daysSince <= 7) streak.innerHTML = '<span style="color:#3fb950">● ON TRACK</span>';
     else if (daysSince <= 10) streak.innerHTML = '<span style="color:#f7931a">● DUE</span>';
     else streak.innerHTML = '<span style="color:#f85149">● OVERDUE</span>';
     lastBuyStrip.style.display = "flex";
-  } else {
-    lastBuyStrip.style.display = "none";
-  }
+  } else lastBuyStrip.style.display = "none";
 
-  // DCA efficiency: sats per £ lifetime, recent 4-buy avg, and whether
-  // recent buying beats the lifetime average (the real DCA question).
+  // DCA efficiency: sats per £ lifetime vs recent buys
   const dcaStrip = document.getElementById("dcaStrip");
   if (purchases.length > 0 && s.totalBtc > 0) {
-    const lifetimeSats = (s.totalBtc * 1e8) / s.totalSpent; // sats per £
-    const recent = [...purchases].sort((a,b)=>b.date.localeCompare(a.date)).slice(0, 4);
-    const rCost = recent.reduce((x,p)=>x+p.cost,0);
-    const rBtc = recent.reduce((x,p)=>x+p.btc,0);
+    const lifetimeSats = (s.totalBtc * 1e8) / s.totalSpent;
+    const recent = buys.slice(-4);
+    const rCost = recent.reduce((x, p) => x + p.cost, 0);
+    const rBtc = recent.reduce((x, p) => x + p.btc, 0);
     const recentSats = rCost > 0 ? (rBtc * 1e8) / rCost : 0;
     document.getElementById("satsPerGbp").textContent = Math.round(lifetimeSats).toLocaleString("en-GB");
     document.getElementById("satsRecent").textContent = Math.round(recentSats).toLocaleString("en-GB");
@@ -713,88 +1165,353 @@ function render() {
     if (recentSats > 0 && lifetimeSats > 0) {
       const diff = ((recentSats - lifetimeSats) / lifetimeSats) * 100;
       effEl.textContent = (diff >= 0 ? "+" : "") + diff.toFixed(0) + "%";
-      effEl.className = "dca-v " + (diff >= 0 ? "pos" : "neg");
-    } else {
-      effEl.textContent = "—"; effEl.className = "dca-v";
-    }
+      effEl.className = "dca-v " + cls(diff);
+    } else { effEl.textContent = "—"; effEl.className = "dca-v"; }
     dcaStrip.style.display = "grid";
-  } else {
-    dcaStrip.style.display = "none";
+  } else dcaStrip.style.display = "none";
+
+  renderGoal(s);
+}
+
+const MILESTONES = [1e5, 2.5e5, 5e5, 1e6, 2.1e6, 5e6, 1e7, 2.1e7, 5e7, 1e8].map(s => s / 1e8);
+
+function renderGoal(s) {
+  const goal = settings.goalBtc > 0 ? settings.goalBtc : 0.1;
+  const pct = Math.min(100, (s.totalBtc / goal) * 100);
+  document.getElementById("goalPct").textContent = pct.toFixed(1) + "%";
+  document.getElementById("goalOf").innerHTML = `${fmtSats(s.totalBtc)} / ${fmtSats(goal)} sats<br><span class="muted">goal ₿ ${+goal.toFixed(8)}</span>`;
+  document.getElementById("goalFill").style.width = pct + "%";
+  // Milestone ticks inside the goal
+  const bar = document.getElementById("goalBar");
+  bar.querySelectorAll(".goal-tick").forEach(e => e.remove());
+  MILESTONES.filter(m => m < goal && m / goal > 0.04).forEach(m => {
+    const i = document.createElement("i");
+    i.className = "goal-tick"; i.style.left = (m / goal * 100) + "%"; i.title = fmtSatsShort(m * 1e8) + " sats";
+    bar.appendChild(i);
+  });
+  const left = Math.max(0, goal - s.totalBtc);
+  document.getElementById("goalLeft").textContent = left > 0 ? `${fmtSats(left)} sats${livePrice ? " · ≈ " + fmtGBP(left * livePrice, 0) : ""}` : "Goal reached 🎉";
+  const pace = recentPace();
+  document.getElementById("goalPaceLbl").textContent = "Pace (last 12 weeks)";
+  document.getElementById("goalPace").textContent = pace > 0 ? fmtSats(pace) + " sats / wk" : "—";
+  const eta = document.getElementById("goalEta");
+  if (left <= 0) eta.textContent = "Done";
+  else if (pace > 0) {
+    const weeks = left / pace;
+    eta.textContent = weeks > 52 * 60 ? "60+ years" : `${fmtDate(Date.now() + weeks * 7 * DAY, {month:"short", year:"numeric"})} (${weeks < 104 ? Math.ceil(weeks) + " wks" : (weeks / 52).toFixed(1) + " yrs"})`;
+  } else eta.textContent = "—";
+  const next = MILESTONES.find(m => m > s.totalBtc + 1e-9);
+  document.getElementById("msLbl").textContent = next ? `Next milestone: ${fmtSatsShort(next * 1e8)} sats` : "Milestones";
+  document.getElementById("msVal").textContent = next ? fmtSats(next - s.totalBtc) + " to go" : "Wholecoiner 🏆";
+}
+
+function toggleGoalEdit() {
+  const el = document.getElementById("goalEdit");
+  el.classList.toggle("show");
+  if (el.classList.contains("show")) {
+    const inp = document.getElementById("goalInput");
+    inp.value = settings.goalBtc;
+    setTimeout(() => inp.focus(), 50);
+  }
+}
+
+function saveGoal() {
+  const v = parseFloat(document.getElementById("goalInput").value);
+  if (!(v > 0) || v > 21e6) return showToast("Enter a goal in BTC, e.g. 0.1");
+  settings.goalBtc = v; saveSettings();
+  document.getElementById("goalEdit").classList.remove("show");
+  renderStack();
+  showToast("Goal updated");
+}
+
+function sparkSVG(values, color) {
+  const min = Math.min(...values), max = Math.max(...values), span = max - min || 1;
+  const pts = values.map((v, i) => [(i / (values.length - 1)) * 100, 28 - ((v - min) / span) * 26]);
+  const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(2) + " " + p[1].toFixed(2)).join(" ");
+  const last = pts[pts.length - 1];
+  return `<svg viewBox="0 0 100 30" preserveAspectRatio="none" aria-label="30 day price trend">
+    <path d="${line} L100 30 L0 30 Z" fill="${color}" opacity="0.12"/>
+    <path d="${line}" fill="none" stroke="${color}" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+    <circle cx="${last[0]}" cy="${last[1]}" r="1.6" fill="${color}"/></svg>`;
+}
+
+// ── INSIGHTS ─────────────────────────────
+function tile(k, v, sub = "", opts = {}) {
+  return `<div class="tile"><div class="tile-k">${k}</div><div class="tile-v ${opts.cls || ""} ${opts.sens ? "sens" : ""}">${v}</div>${sub ? `<div class="tile-s">${sub}</div>` : ""}${opts.bar != null ? `<div class="mini-bar"><i style="width:${Math.max(0, Math.min(100, opts.bar))}%"></i></div>` : ""}</div>`;
+}
+
+function renderInsights() {
+  const s = computeStats();
+  const buys = buysAsc();
+  const tilesEl = document.getElementById("returnTiles");
+  if (!buys.length) { tilesEl.innerHTML = '<div class="empty" style="grid-column:1/-1">Add a purchase to see insights</div>'; }
+  else {
+    let html = "";
+    const now = Date.now();
+    const days = Math.max(1, Math.round((now - buys[0].t) / DAY));
+
+    // Annualised (money-weighted) return
+    if (livePrice && days > 90) {
+      const r = xirr([...buys.map(b => ({t: b.t, v: -b.cost})), {t: now, v: s.currentValue}]);
+      html += tile("Annualised return", r !== null ? fmtPct(r * 100) : "—", "money-weighted (XIRR)", {cls: r !== null ? cls(r) : ""});
+    } else {
+      html += tile("Annualised return", "—", "needs 90+ days of history");
+    }
+
+    // DCA vs lump sum on day one
+    if (livePrice) {
+      const firstEff = buys[0].cost / buys[0].btc;
+      const lumpVal = (s.totalSpent / firstEff) * livePrice;
+      const diff = s.currentValue - lumpVal;
+      html += tile("DCA vs lump sum", fmtSignedGBP(diff, 0), `vs ${fmtGBP(s.totalSpent, 0)} all-in on ${fmtDate(buys[0].t, {day:"numeric", month:"short", year:"2-digit"})} (${fmtGBP(lumpVal, 0)})`, {cls: cls(diff), sens: true});
+    }
+
+    // Best & worst buy (by price paid per BTC)
+    const eff = buys.map(b => ({...b, eff: b.cost / b.btc}));
+    const best = eff.reduce((a, b) => b.eff < a.eff ? b : a);
+    const worst = eff.reduce((a, b) => b.eff > a.eff ? b : a);
+    const g = b => livePrice ? (livePrice / b.eff - 1) * 100 : null;
+    html += tile("Best buy", livePrice ? fmtPct(g(best), 0) : fmtGBP(best.eff, 0), `@ ${fmtGBP(best.eff, 0)} · ${fmtDate(best.t, {day:"numeric", month:"short", year:"2-digit"})}`, {cls: livePrice ? cls(g(best)) : ""});
+    html += tile("Worst buy", livePrice ? fmtPct(g(worst), 0) : fmtGBP(worst.eff, 0), `@ ${fmtGBP(worst.eff, 0)} · ${fmtDate(worst.t, {day:"numeric", month:"short", year:"2-digit"})}`, {cls: livePrice ? cls(g(worst)) : ""});
+
+    // Buys in profit
+    if (livePrice) {
+      const inProfit = eff.filter(b => b.eff < livePrice).length;
+      html += tile("Buys in profit", `${inProfit} / ${buys.length}`, `${Math.round(inProfit / buys.length * 100)}% of your buys are up`, {bar: inProfit / buys.length * 100});
+    }
+
+    // Peak value + drawdown
+    const tl = buildTimeline();
+    if (tl.length > 1) {
+      const peak = tl.reduce((a, b) => b.value > a.value ? b : a);
+      const cur = tl[tl.length - 1];
+      const dd = (cur.value / peak.value - 1) * 100;
+      html += tile("Peak stack value", fmtGBP(peak.value, 0), `${fmtDate(peak.t, {day:"numeric", month:"short", year:"2-digit"})} · now ${dd > -0.05 ? "at peak" : fmtPct(dd) + " from peak"}`, {sens: true});
+      // Worst point relative to money in
+      const low = tl.reduce((a, b) => (b.value / b.cost) < (a.value / a.cost) ? b : a);
+      html += tile("Deepest underwater", fmtPct((low.value / low.cost - 1) * 100), `${fmtDate(low.t, {day:"numeric", month:"short", year:"2-digit"})} · stack vs £ in`, {cls: cls(low.value - low.cost)});
+    }
+
+    // Spend cadence
+    const weeks = Math.max(1, days / 7);
+    html += tile("Average buy", fmtGBP(s.totalSpent / buys.length), `${fmtGBP(s.totalSpent / weeks)} per week on average`, {sens: true});
+    html += tile("Stacking for", days.toLocaleString("en-GB") + " days", `since ${fmtDate(buys[0].t)}`);
+    html += tile("Share of 21M", "1 in " + Math.round(21e6 / s.totalBtc).toLocaleString("en-GB"), "of all bitcoin that will ever exist", {sens: true});
+    if (s.totalSpent > 0) {
+      const breakEvenDrop = livePrice ? (s.dcaAvg / livePrice - 1) * 100 : null;
+      html += tile("Break-even price", fmtGBP(s.dcaAvg, 0), breakEvenDrop !== null ? (breakEvenDrop < 0 ? `BTC can fall ${Math.abs(breakEvenDrop).toFixed(1)}% before you're down` : `BTC needs +${breakEvenDrop.toFixed(1)}% to get you even`) : "");
+    }
+    tilesEl.innerHTML = html;
   }
 
-  // Stats
-  document.getElementById("totalSpent").textContent = fmtGBP(s.totalSpent);
-  document.getElementById("totalBtc").textContent = "₿ " + s.totalBtc.toFixed(8);
-  document.getElementById("dcaAvg").textContent = fmtGBP(s.dcaAvg, 0);
-  document.getElementById("currentValue").textContent = s.currentValue !== null ? fmtGBP(s.currentValue) : "—";
-  document.getElementById("buyCount").textContent = purchases.length + " buys";
-
-  // PnL
-  const pnlEl = document.getElementById("pnlValue");
-  const pctEl = document.getElementById("pnlPct");
-  if (s.pnl !== null) {
-    const cls = s.pnl >= 0 ? "positive" : "negative";
-    pnlEl.textContent = (s.pnl >= 0 ? "+" : "") + fmtGBP(s.pnl);
-    pnlEl.className = "pnl-value " + cls;
-    pctEl.textContent = (s.pnlPct >= 0 ? "+" : "") + s.pnlPct.toFixed(2) + "%";
-    pctEl.className = "pnl-pct " + cls;
-  } else {
-    pnlEl.textContent = "—";
-    pctEl.textContent = "—";
-    pnlEl.className = "pnl-value";
-    pctEl.className = "pnl-pct";
-  }
-
-  renderHistory();
-  renderChart();
-  renderProjection();
+  renderHeatmap();
   renderYearly();
 }
 
+function renderHeatmap() {
+  const weeks = buildWeeks();
+  const hm = document.getElementById("heatmap");
+  const st = streakStats(weeks);
+  document.getElementById("streaks").innerHTML =
+    tile("Current streak", st.current + (st.current === 1 ? " week" : " weeks")) +
+    tile("Longest streak", st.longest + (st.longest === 1 ? " week" : " weeks")) +
+    tile("Weeks with a buy", st.total ? Math.round(st.hit / st.total * 100) + "%" : "—", `${st.hit} of ${st.total}`);
+  if (!weeks.length) { hm.innerHTML = ""; document.getElementById("heatRange").textContent = ""; return; }
+
+  const costs = weeks.filter(w => w.count).map(w => w.cost).sort((a, b) => a - b);
+  const median = costs[Math.floor(costs.length / 2)] || 1;
+  const level = c => { if (!c) return 0; const r = c / median; return r < 0.9 ? 1 : r < 1.5 ? 2 : r < 3 ? 3 : 4; };
+  const current = weekStart(Date.now());
+  let html = "";
+  for (let r = 0; r < weeks.length; r += 26) {
+    html += `<span class="heat-lbl">${fmtDate(weeks[r].t, {month:"short", year:"2-digit"})}</span>`;
+    for (let c = 0; c < 26; c++) {
+      const w = weeks[r + c];
+      if (!w) { html += `<span class="heat-cell blank"></span>`; continue; }
+      const l = level(w.cost);
+      const title = `${fmtDate(w.t, {day:"numeric", month:"short", year:"numeric"})}: ${w.count ? fmtGBP(w.cost) + " · " + fmtSats(w.btc) + " sats" : "no buy"}`;
+      html += `<button class="heat-cell${l ? " l" + l : ""}${w.t === current ? " now" : ""}${w.t === selectedWeek ? " sel" : ""}" title="${title}" aria-label="${title}" onclick="selectWeek(${w.t})"></button>`;
+    }
+  }
+  hm.innerHTML = html;
+  document.getElementById("heatRange").textContent = `${weeks.length} weeks`;
+}
+
+function selectWeek(t) {
+  selectedWeek = t;
+  const w = buildWeeks().find(x => x.t === t);
+  const el = document.getElementById("heatDetail");
+  if (w) {
+    const label = `Week of ${fmtDate(w.t)}`;
+    el.innerHTML = w.count
+      ? `${label}: <b style="color:#f7931a" class="sens">${fmtGBP(w.cost)}</b> across ${w.count} buy${w.count > 1 ? "s" : ""} · <span class="sens">${fmtSats(w.btc)} sats</span>`
+      : `${label}: no buy`;
+  }
+  renderHeatmap();
+}
+
+function renderYearly() {
+  const body = document.getElementById("yearlyBody");
+  if (purchases.length === 0) { body.innerHTML = '<div class="empty">No data yet</div>'; return; }
+  const byYear = {};
+  purchases.forEach(p => {
+    const y = p.date.slice(0, 4);
+    if (!byYear[y]) byYear[y] = {cost: 0, btc: 0, count: 0};
+    byYear[y].cost += p.cost; byYear[y].btc += p.btc; byYear[y].count += 1;
+  });
+  const years = Object.keys(byYear).sort((a, b) => b.localeCompare(a));
+  let html = `<div class="yearly-row header"><span>Year</span><span class="yr-val">Invested</span><span class="yr-val">Stacked</span><span class="yr-val">Avg £</span><span class="yr-val">Return</span></div>`;
+  years.forEach(y => {
+    const d = byYear[y];
+    const avg = d.cost / d.btc;
+    const val = livePrice ? d.btc * livePrice : null;
+    const ret = val !== null ? (val / d.cost - 1) * 100 : null;
+    html += `<div class="yearly-row">
+      <span class="yr-year">${y}</span>
+      <span><div class="yr-val sens">${fmtGBP(d.cost, 0)}</div><div class="yr-sub">${d.count} buys</div></span>
+      <span><div class="yr-val sens" style="color:#f7931a">${fmtSatsShort(d.btc * 1e8)}</div><div class="yr-sub">sats</div></span>
+      <span class="yr-val">${fmtGBP(avg, 0)}</span>
+      <span><div class="yr-val ${ret !== null ? cls(ret) : ""}">${ret !== null ? fmtPct(ret, 0) : "—"}</div><div class="yr-sub sens">${val !== null ? fmtGBP(val, 0) : ""}</div></span>
+    </div>`;
+  });
+  body.innerHTML = html;
+}
+
+// ── MARKET ─────────────────────────────
+function fngColor(v) { return v < 25 ? "#f85149" : v < 45 ? "#e0826c" : v <= 55 ? "#8b949e" : v <= 75 ? "#7cc36e" : "#3fb950"; }
+
+function renderMarket() {
+  const m = market || {};
+  const s = computeStats();
+  let html = "";
+  html += tile("Market cap", fmtCompactGBP(m.mcap), m.vol ? `24h volume ${fmtCompactGBP(m.vol)}` : "");
+  if (m.ath) {
+    const athDays = m.athDate ? Math.floor((Date.now() - new Date(m.athDate).getTime()) / DAY) : null;
+    html += tile("All-time high", fmtGBP(m.ath, 0), m.athDate ? `${fmtDate(new Date(m.athDate).getTime())} · ${athDays}d ago` : "");
+    const fromAth = m.athChg ?? (livePrice ? (livePrice / m.ath - 1) * 100 : null);
+    html += tile("Down from ATH", fmtPct(fromAth), livePrice ? `needs ${fmtPct((m.ath / livePrice - 1) * 100)} to reclaim` : "", {cls: fromAth !== null ? cls(fromAth) : ""});
+  }
+  if (m.supply) {
+    html += tile("Supply mined", (m.supply / 21e6 * 100).toFixed(2) + "%", `${(m.supply / 1e6).toFixed(3)}M of 21M BTC`, {bar: m.supply / 21e6 * 100});
+  }
+  if (livePrice) {
+    html += tile("Sats per £1", Math.round(1e8 / livePrice).toLocaleString("en-GB"), `vs ${Math.round(s.totalBtc * 1e8 / (s.totalSpent || 1)).toLocaleString("en-GB")} your lifetime avg`);
+    const pl = powerLawGBP(Date.now());
+    if (pl > 0) html += tile("Power-law fair value", fmtGBP(pl, 0), `price is ${fmtPct((livePrice / pl - 1) * 100, 0)} vs trend`, {cls: livePrice < pl ? "pos" : ""});
+  }
+  document.getElementById("marketTiles").innerHTML = html || '<div class="empty" style="grid-column:1/-1">Loading market data…</div>';
+  const pc = lsGet(PRICE_CACHE_KEY);
+  document.getElementById("mktUpdated").textContent = pc?.ts ? "CoinGecko · " + new Date(pc.ts).toLocaleTimeString("en-GB", {hour:"2-digit", minute:"2-digit"}) : "";
+
+  // Fear & greed
+  const fb = document.getElementById("fngBody");
+  if (fng && fng.length) {
+    const cur = fng[0];
+    const ago = n => fng[n] ? fng[n].v : null;
+    const col = fngColor(cur.v);
+    const series = [...fng].reverse();
+    const bw = 100 / series.length;
+    const bars = series.map((d, i) => `<rect x="${(i * bw + bw * 0.15).toFixed(2)}" y="${(40 - d.v * 0.4).toFixed(2)}" width="${(bw * 0.7).toFixed(2)}" height="${(d.v * 0.4).toFixed(2)}" rx="0.6" fill="${fngColor(d.v)}" opacity="${i === series.length - 1 ? 1 : 0.55}"><title>${fmtDate(d.t)}: ${d.v} ${d.cls}</title></rect>`).join("");
+    fb.innerHTML = `
+      <div class="fng-top">
+        <div class="fng-num" style="color:${col}">${cur.v}</div>
+        <div><div class="fng-cls" style="color:${col}">${cur.cls}</div><div class="card-note">${cur.v < 45 ? "Fear has historically been a better time to stack." : cur.v > 55 ? "Greed — markets can be frothy. Stay the course." : "Sentiment is balanced."}</div></div>
+      </div>
+      <div class="fng-scale"><div class="range-mark" style="left:${cur.v}%;background:${col}"></div></div>
+      <div class="range-lbl"><span>Extreme fear</span><span>Neutral</span><span>Extreme greed</span></div>
+      <div class="fng-hist">
+        <div><b style="color:${fngColor(ago(1) ?? 50)}">${ago(1) ?? "—"}</b><span>Yesterday</span></div>
+        <div><b style="color:${fngColor(ago(7) ?? 50)}">${ago(7) ?? "—"}</b><span>Last week</span></div>
+        <div><b style="color:${fngColor(ago(30) ?? 50)}">${ago(30) ?? "—"}</b><span>Last month</span></div>
+      </div>
+      <div class="fng-spark"><svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-label="Fear and greed, last 30 days">${bars}</svg></div>
+      <div class="range-lbl"><span>30 days ago</span><span>Today</span></div>`;
+  } else if (!fb.querySelector(".fng-top")) {
+    fb.innerHTML = '<div class="empty">Sentiment data unavailable</div>';
+  }
+
+  // Network
+  const nb = document.getElementById("netBody");
+  if (net && net.height) {
+    const H = net.height, INTERVAL = 210000;
+    const nextHalving = Math.ceil((H + 1) / INTERVAL) * INTERVAL;
+    const left = nextHalving - H;
+    const avgBlockMs = net.diff?.timeAvg > 0 ? net.diff.timeAvg : 600000;
+    const halvingEta = Date.now() + left * avgBlockMs;
+    const epochPct = ((H % INTERVAL) / INTERVAL) * 100;
+    const reward = 50 / Math.pow(2, Math.floor(H / INTERVAL));
+    let h = `<div class="tiles">`;
+    h += tile("Block height", H.toLocaleString("en-GB"), `subsidy ₿ ${reward} per block`);
+    h += tile("Next halving", fmtDate(halvingEta, {month:"short", year:"numeric"}), `${left.toLocaleString("en-GB")} blocks · ~${Math.round(left * avgBlockMs / DAY).toLocaleString("en-GB")} days`, {bar: epochPct});
+    if (net.fees) {
+      const f = net.fees;
+      const txCost = livePrice ? (f.halfHourFee * 141 / 1e8) * livePrice : null; // ~141 vB: 1-in, 2-out segwit
+      h += tile("Fees (sat/vB)", `${f.fastestFee} · ${f.halfHourFee} · ${f.hourFee}`, `fast · 30 min · 1 hr${txCost !== null ? `<br>typical send ≈ ${fmtGBP(txCost)}` : ""}`);
+    }
+    if (net.hashrate) h += tile("Hashrate", (net.hashrate / 1e18).toFixed(0) + " EH/s", "3-day average");
+    if (net.diff) {
+      const d = net.diff;
+      h += tile("Difficulty adjustment", fmtPct(d.difficultyChange, 2), `${d.remainingBlocks?.toLocaleString("en-GB") ?? "—"} blocks left${d.estimatedRetargetDate ? " · " + fmtDate(d.estimatedRetargetDate, {day:"numeric", month:"short"}) : ""}`, {cls: d.difficultyChange >= 0 ? "" : "neg", bar: d.progressPercent});
+      h += tile("Avg block time", (avgBlockMs / 60000).toFixed(1) + " min", "this difficulty epoch");
+    }
+    h += `</div>`;
+    nb.innerHTML = h;
+  } else if (!nb.querySelector(".tiles")) {
+    nb.innerHTML = '<div class="empty">Network data unavailable</div>';
+  }
+}
+
+// ── HISTORY LIST ─────────────────────────────
 function renderHistory() {
   const list = document.getElementById("histList");
   document.getElementById("histCount").textContent = purchases.length + " entries";
+  const sortSel = document.getElementById("histSort");
+  sortSel.value = settings.sort;
 
   if (purchases.length === 0) {
     list.innerHTML = '<div class="empty">No purchases yet</div>';
+    document.getElementById("histSummary").textContent = "";
     return;
   }
 
-  const sorted = [...purchases].sort((a, b) => b.date.localeCompare(a.date));
+  const gain = p => livePrice ? (p.btc * livePrice / p.cost - 1) * 100 : 0;
+  const sorters = {
+    newest: (a, b) => b.date.localeCompare(a.date),
+    oldest: (a, b) => a.date.localeCompare(b.date),
+    best: (a, b) => gain(b) - gain(a),
+    worst: (a, b) => gain(a) - gain(b),
+    largest: (a, b) => b.cost - a.cost
+  };
+  const sorted = [...purchases].sort(sorters[settings.sort] || sorters.newest);
+  if (livePrice) {
+    const up = purchases.filter(p => gain(p) >= 0).length;
+    document.getElementById("histSummary").textContent = `${up} up · ${purchases.length - up} down at today's price`;
+  }
   list.innerHTML = sorted.map(p => {
-    const d = new Date(p.date);
-    const dateStr = d.toLocaleDateString("en-GB", {day:"2-digit", month:"short", year:"numeric"});
+    const dateStr = new Date(p.date).toLocaleDateString("en-GB", {day:"2-digit", month:"short", year:"numeric"});
     const isPending = pendingDeleteId === p.id;
     const isEditing = editingId === p.id;
+    const g = gain(p);
     return `
-      <div class="history-item${isEditing ? ' editing' : ''}" onclick="if(event.target.closest('button'))return; editPurchase(${p.id})">
+      <div class="history-item${isEditing ? " editing" : ""}" onclick="if(event.target.closest('button'))return; editPurchase(${p.id})">
         <div>
           <div class="h-date">${dateStr}</div>
           <div class="h-price">@ ${fmtGBP(p.price, 0)}</div>
         </div>
-        <div>
-          <div class="h-btc">${p.btc.toFixed(8)}</div>
-          <div class="h-cost" style="text-align:right">${fmtGBP(p.cost)}</div>
+        ${livePrice ? `<span class="h-gain ${cls(g)}">${fmtPct(g, 1)}</span>` : "<span></span>"}
+        <div class="sens">
+          <div class="h-btc">${fmtSats(p.btc)} <span style="font-size:10px;color:#6b7280;font-weight:500">sats</span></div>
+          <div class="h-cost">${fmtGBP(p.cost)}</div>
         </div>
         ${isPending
           ? `<div class="confirm-row"><button class="confirm-yes" onclick="confirmDelete(${p.id})">Delete</button><button class="confirm-no" onclick="cancelDelete()">×</button></div>`
-          : `<button class="delete-btn" onclick="askDelete(${p.id})">✕</button>`
-        }
-      </div>
-    `;
+          : `<button class="delete-btn" onclick="askDelete(${p.id})" aria-label="Delete purchase">✕</button>`}
+      </div>`;
   }).join("");
 }
 
-function askDelete(id) {
-  pendingDeleteId = id;
-  renderHistory();
-}
-
-function cancelDelete() {
-  pendingDeleteId = null;
-  renderHistory();
-}
-
+function askDelete(id) { pendingDeleteId = id; renderHistory(); }
+function cancelDelete() { pendingDeleteId = null; renderHistory(); }
 function confirmDelete(id) {
   purchases = purchases.filter(p => p.id !== id);
   pendingDeleteId = null;
@@ -803,224 +1520,209 @@ function confirmDelete(id) {
   showToast("Deleted — undo with Restore");
 }
 
-function switchChart(type) {
-  currentChartType = type;
-  document.querySelectorAll(".chart-tab").forEach(t => t.classList.toggle("active", t.dataset.chart === type));
-  renderChart();
+// ── CHARTS ─────────────────────────────
+const TICK = {color: "#6b7280", font: {size: 9}};
+const GRID = {color: "rgba(255,255,255,0.04)"};
+const C = {btc: "#f7931a", invested: "#8b949e", price: "#6e6e8f", pl: "#a78bfa", pos: "#3fb950", neg: "#f85149"};
+
+function xScaleTime(minX, maxX) {
+  const span = (maxX - minX) / DAY;
+  if (typeof luxon !== "undefined") {
+    const unit = span <= 120 ? "week" : span <= 1100 ? "month" : "year";
+    return {type: "time", min: minX, max: maxX, time: {unit, displayFormats: {week: "d MMM", month: "MMM yy", year: "yyyy"}}, ticks: {...TICK, maxRotation: 0, autoSkip: true, maxTicksLimit: 6}, grid: GRID};
+  }
+  // Graceful degradation if the date adapter didn't load: numeric axis with our own labels.
+  return {type: "linear", min: minX, max: maxX, ticks: {...TICK, maxTicksLimit: 5, callback: v => fmtDate(v, {month: "short", year: "2-digit"})}, grid: GRID};
 }
 
-function renderChart() {
-  const ctx = document.getElementById("mainChart").getContext("2d");
-  const sorted = [...purchases].sort((a, b) => a.date.localeCompare(b.date));
-  if (sorted.length === 0) { if (chart) { chart.destroy(); chart = null; } return; }
+function baseOptions({x, y, tooltipLabel, legend = true}) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    interaction: {intersect: false, mode: "nearest", axis: "x"},
+    plugins: {
+      legend: {display: legend, position: "bottom", labels: {color: "#9ca3af", font: {size: 10}, boxWidth: 8, boxHeight: 8, padding: 12, usePointStyle: true,
+        // Solid swatches in the series colour (line datasets have translucent fills)
+        generateLabels: ch => Chart.defaults.plugins.legend.labels.generateLabels(ch).map(l => {
+          const ds = ch.data.datasets[l.datasetIndex];
+          const col = ds.type === "scatter" ? ds.backgroundColor : ds.borderColor;
+          return {...l, fillStyle: col, strokeStyle: col, lineDash: []};
+        })}},
+      tooltip: {
+        backgroundColor: "#1f1f2a", borderColor: "#26262f", borderWidth: 1,
+        titleColor: "#f7931a", bodyColor: "#e8e8ed", padding: 10, displayColors: true, boxPadding: 4,
+        callbacks: {
+          title: items => items.length && x.type !== "category" ? fmtDate(items[0].parsed.x) : (items[0]?.label ?? ""),
+          label: tooltipLabel || (c => c.dataset.label + ": " + fmtGBP(c.parsed.y, 0))
+        }
+      }
+    },
+    scales: {x, y: {ticks: {...TICK, callback: fmtAxisGBP}, grid: GRID, ...y}}
+  };
+}
 
-  const buys = sorted.map(p => ({ t: new Date(p.date).getTime(), cost: p.cost, btc: p.btc, price: p.price }));
+function makeChart(key, canvasId, config) {
+  if (charts[key]) { charts[key].destroy(); delete charts[key]; }
+  if (typeof Chart === "undefined") return;
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || !canvas.offsetParent) return; // hidden view — render when shown
+  charts[key] = new Chart(canvas.getContext("2d"), config);
+}
+
+function renderActiveCharts() {
+  if (settings.view === "stack") renderMainChart();
+  else if (settings.view === "insights") renderMonthlyChart();
+  else if (settings.view === "market") renderCorridorChart();
+}
+
+function renderMainChart() {
+  document.querySelectorAll("#chartSeg button").forEach(b => b.classList.toggle("active", b.dataset.chart === settings.chart));
+  document.querySelectorAll("#rangeSeg button").forEach(b => b.classList.toggle("active", b.dataset.range === String(settings.range)));
+  const buys = buysAsc();
+  if (!buys.length) { if (charts.main) { charts.main.destroy(); delete charts.main; } document.getElementById("chartSub").textContent = "Add a purchase to see charts"; return; }
+
+  const now = Date.now();
   const hasHistory = priceHistory && priceHistory.length > 1;
-  const nowMs = Date.now();
+  const minX = settings.range === "all" ? buys[0].t - DAY : Math.max(buys[0].t - DAY, now - settings.range * DAY);
+  const inRange = arr => arr.filter(pt => pt.x >= minX);
+  const type = settings.chart;
+  let datasets = [], sub = "", yOpts = {}, tooltipLabel = null, legend = true;
 
-  let datasets = [], sub = "";
-
-  if (currentChartType === "value") {
-    // TRUE stack value over time: at each historical day, value = BTC-held-so-far × that day's real price.
-    // Falls back to buy-point valuation if history hasn't loaded yet.
-    sub = hasHistory ? "Stack value tracked against what you put in" : "Loading price history…";
-    const valueSeries = [], costSeries = [];
-    if (hasHistory) {
-      let cumBtc = 0, cumCost = 0, bi = 0;
-      for (const {t, p} of priceHistory) {
-        while (bi < buys.length && buys[bi].t <= t) { cumBtc += buys[bi].btc; cumCost += buys[bi].cost; bi++; }
-        if (cumCost > 0) { valueSeries.push({x: t, y: cumBtc * p}); costSeries.push({x: t, y: cumCost}); }
-      }
-      // Pin the final point to live price for an up-to-the-second value
-      if (livePrice) {
-        const tCost = buys.reduce((s,b)=>s+b.cost,0), tBtc = buys.reduce((s,b)=>s+b.btc,0);
-        valueSeries.push({x: nowMs, y: tBtc * livePrice}); costSeries.push({x: nowMs, y: tCost});
-      }
-    } else {
-      let cumBtc = 0, cumCost = 0;
-      buys.forEach(b => { cumBtc += b.btc; cumCost += b.cost; valueSeries.push({x: b.t, y: livePrice ? cumBtc*livePrice : cumBtc*b.price}); costSeries.push({x: b.t, y: cumCost}); });
-    }
+  if (type === "value") {
+    sub = "Stack value (at each day's real price) vs £ put in";
+    const tl = buildTimeline();
     datasets = [
-      {label:"Invested", data: costSeries, borderColor:"#8b949e", backgroundColor:"rgba(139,148,158,0.06)", borderWidth:1.5, pointRadius:0, fill:true, stepped:false},
-      {label:"Stack value", data: valueSeries, borderColor:"#f7931a", backgroundColor:"rgba(247,147,26,0.14)", borderWidth:2.5, pointRadius:0, fill:true}
+      {label: "Invested", data: inRange(tl.map(p => ({x: p.t, y: p.cost}))), borderColor: C.invested, backgroundColor: "rgba(139,148,158,0.06)", borderWidth: 1.5, pointRadius: 0, fill: true},
+      {label: "Stack value", data: inRange(tl.map(p => ({x: p.t, y: p.value}))), borderColor: C.btc, backgroundColor: "rgba(247,147,26,0.14)", borderWidth: 2, pointRadius: 0, fill: true, tension: 0.1}
     ];
   }
-  else if (currentChartType === "buys") {
-    // Real BTC price line with each buy dropped on as a dot, coloured by
-    // whether it landed below your running DCA average (green = a good buy).
-    sub = hasHistory ? "Your buys on the real price line — green beat your average" : "Loading price history…";
-    if (hasHistory) {
-      datasets.push({label:"BTC price", data: priceHistory.map(h => ({x: h.t, y: h.p})), borderColor:"#3a3a55", borderWidth:1.5, pointRadius:0, fill:false, order:2});
-    }
+  else if (type === "pnl") {
+    sub = "Unrealised profit / loss over time";
+    const tl = buildTimeline();
+    datasets = [{
+      label: "Profit / loss", data: inRange(tl.map(p => ({x: p.t, y: p.value - p.cost, pct: (p.value / p.cost - 1) * 100}))),
+      borderColor: C.pos, borderWidth: 2, pointRadius: 0, tension: 0.1,
+      segment: {borderColor: c => (c.p0.parsed.y + c.p1.parsed.y) / 2 < 0 ? C.neg : C.pos},
+      fill: {target: "origin", above: "rgba(63,185,80,0.14)", below: "rgba(248,81,73,0.14)"}
+    }];
+    legend = false;
+    tooltipLabel = c => `${fmtSignedGBP(c.parsed.y)} (${fmtPct(c.raw.pct)})`;
+  }
+  else if (type === "buys") {
+    sub = hasHistory ? "Each buy on the real price line — green beat your running average" : "Your buys — green beat your running average";
     let cumBtc = 0, cumCost = 0;
     const good = [], dear = [];
-    buys.forEach(b => { cumBtc += b.btc; cumCost += b.cost; const dca = cumCost/cumBtc; (b.price <= dca ? good : dear).push({x: b.t, y: b.price}); });
-    datasets.push({label:"Bought cheap", data: good, type:"scatter", backgroundColor:"#3fb950", borderColor:"#0a0a0f", borderWidth:1, pointRadius:4, pointHoverRadius:6, order:1});
-    datasets.push({label:"Bought dear", data: dear, type:"scatter", backgroundColor:"#f85149", borderColor:"#0a0a0f", borderWidth:1, pointRadius:4, pointHoverRadius:6, order:1});
+    buys.forEach(b => { cumBtc += b.btc; cumCost += b.cost; (b.price <= cumCost / cumBtc ? good : dear).push({x: b.t, y: b.price, b}); });
+    if (hasHistory) datasets.push({label: "BTC price", data: inRange(getHistory().map(h => ({x: h.t, y: h.p}))), borderColor: C.price, borderWidth: 1.5, pointRadius: 0, order: 3});
+    datasets.push({label: "Below avg", data: inRange(good), type: "scatter", backgroundColor: C.pos, borderColor: "#101019", borderWidth: 2, pointRadius: 4, pointHoverRadius: 7, order: 1});
+    datasets.push({label: "Above avg", data: inRange(dear), type: "scatter", backgroundColor: C.neg, borderColor: "#101019", borderWidth: 2, pointRadius: 4, pointHoverRadius: 7, order: 1});
+    const avg = computeStats().dcaAvg;
+    datasets.push({label: "Your avg now", data: [{x: minX, y: avg}, {x: now, y: avg}], borderColor: C.btc, borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, order: 2});
+    tooltipLabel = c => {
+      const b = c.raw?.b;
+      if (b) return `${fmtGBP(b.price, 0)} · ${fmtGBP(b.cost, 0)} → ${fmtSats(b.btc)} sats`;
+      return c.dataset.label + ": " + fmtGBP(c.parsed.y, 0);
+    };
   }
-  else { // dca
-    sub = "Your average cost vs the power-law trend";
+  else if (type === "dca") {
+    sub = "Your average cost vs the market and the power-law trend";
     let cumCost = 0, cumBtc = 0;
     const dcaSeries = [];
-    buys.forEach(b => { cumCost += b.cost; cumBtc += b.btc; dcaSeries.push({x: b.t, y: cumCost/cumBtc}); });
-    if (hasHistory) {
-      datasets.push({label:"BTC price", data: priceHistory.map(h => ({x: h.t, y: h.p})), borderColor:"#3a3a55", borderWidth:1.5, pointRadius:0, fill:false});
-    }
-    datasets.push({label:"Your DCA avg", data: dcaSeries, borderColor:"#f7931a", borderWidth:2.5, pointRadius:0, fill:false});
-    // Power-law trend across the visible span
-    const plStart = buys[0].t, plEnd = nowMs, steps = 60;
+    buys.forEach(b => { cumCost += b.cost; cumBtc += b.btc; dcaSeries.push({x: b.t, y: cumCost / cumBtc}); });
+    dcaSeries.push({x: now, y: cumCost / cumBtc});
+    if (hasHistory) datasets.push({label: "BTC price", data: inRange(getHistory().map(h => ({x: h.t, y: h.p}))), borderColor: C.price, borderWidth: 1.5, pointRadius: 0});
+    datasets.push({label: "Your avg cost", data: inRange(dcaSeries), borderColor: C.btc, borderWidth: 2, pointRadius: 0, stepped: "before"});
     const plSeries = [];
-    for (let i = 0; i <= steps; i++) { const t = plStart + (plEnd - plStart) * i / steps; plSeries.push({x: t, y: powerLawGBP(t)}); }
-    datasets.push({label:"Power law", data: plSeries, borderColor:"#6b46c1", borderWidth:1.5, borderDash:[3,3], pointRadius:0, fill:false});
+    for (let i = 0; i <= 60; i++) { const t = minX + (now - minX) * i / 60; plSeries.push({x: t, y: powerLawGBP(t)}); }
+    datasets.push({label: "Power law", data: plSeries, borderColor: C.pl, borderWidth: 1.5, borderDash: [3, 3], pointRadius: 0});
+  }
+  else { // sats
+    sub = "Sats stacked over time";
+    let cum = 0;
+    const series = buys.map(b => { cum += b.btc * 1e8; return {x: b.t, y: cum, add: b.btc * 1e8}; });
+    series.push({x: now, y: cum, add: 0});
+    datasets = [{label: "Sats", data: inRange(series), borderColor: C.btc, backgroundColor: "rgba(247,147,26,0.14)", borderWidth: 2, pointRadius: 0, fill: true, stepped: "before"}];
+    legend = false;
+    yOpts = {ticks: {...TICK, callback: v => fmtSatsShort(v)}};
+    tooltipLabel = c => `${Math.round(c.parsed.y).toLocaleString("en-GB")} sats${c.raw.add ? ` (+${Math.round(c.raw.add).toLocaleString("en-GB")})` : ""}`;
   }
 
   document.getElementById("chartSub").textContent = sub;
+  const opts = baseOptions({x: xScaleTime(minX, now), y: yOpts, tooltipLabel, legend});
+  makeChart("main", "mainChart", {type: "line", data: {datasets}, options: opts});
+}
 
-  // Graceful degradation: if the time adapter failed to load, fall back to a
-  // plain category axis using formatted date labels so the chart still renders.
-  const timeAxisOK = typeof luxon !== "undefined";
-  let xScale;
-  if (timeAxisOK) {
-    xScale = {type: "time", time: {unit: "month", displayFormats: {month: "MMM yy"}}, ticks: {color:"#6b7280", font:{size:9}, maxRotation:0, autoSkip:true, maxTicksLimit:6}, grid: {color:"rgba(255,255,255,0.03)"}};
-  } else {
-    // Convert {x:ms,y} points to plain y-values against a shared date-label axis.
-    datasets.forEach(ds => { ds.data = ds.data.map(pt => (pt && typeof pt === "object") ? pt.y : pt); });
-    xScale = {ticks: {color:"#6b7280", font:{size:9}, maxRotation:0, autoSkip:true, maxTicksLimit:6}, grid: {color:"rgba(255,255,255,0.03)"}};
+function renderMonthlyChart() {
+  document.querySelectorAll("#monthlySeg button").forEach(b => b.classList.toggle("active", b.dataset.m === settings.monthly));
+  const buys = buysAsc();
+  if (!buys.length) { if (charts.monthly) { charts.monthly.destroy(); delete charts.monthly; } return; }
+  // Every month from first buy to now, including months with no buys
+  const months = [];
+  const d = new Date(buys[0].t); d.setUTCDate(1);
+  const end = new Date();
+  while (d.getUTCFullYear() < end.getUTCFullYear() || (d.getUTCFullYear() === end.getUTCFullYear() && d.getUTCMonth() <= end.getUTCMonth())) {
+    months.push({key: d.toISOString().slice(0, 7), label: d.toLocaleDateString("en-GB", {month: "short", year: "2-digit", timeZone: "UTC"}), cost: 0, btc: 0, n: 0});
+    d.setUTCMonth(d.getUTCMonth() + 1);
   }
+  const idx = Object.fromEntries(months.map((m, i) => [m.key, i]));
+  buys.forEach(b => { const m = months[idx[b.date.slice(0, 7)]]; if (m) { m.cost += b.cost; m.btc += b.btc; m.n++; } });
 
-  if (chart) chart.destroy();
-  chart = new Chart(ctx, {
-    type: "line",
-    data: {datasets},
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      interaction: {intersect: false, mode: "index"},
-      plugins: {
-        legend: {display: true, position: "bottom", labels: {color:"#9ca3af", font:{size:10}, boxWidth:10, boxHeight:2, padding:12, usePointStyle: true}},
-        tooltip: {
-          backgroundColor: "#1f1f2a", borderColor: "#26262f", borderWidth: 1,
-          titleColor: "#f7931a", bodyColor: "#e8e8ed", padding: 10, displayColors: true,
-          callbacks: {
-            title: items => (timeAxisOK && items.length) ? luxon.DateTime.fromMillis(items[0].parsed.x).toFormat("d LLL yyyy") : "",
-            label: c => {
-              if (currentChartType === "buys" && (c.dataset.label === "Bought cheap" || c.dataset.label === "Bought dear")) {
-                const b = buys.find(x => Math.abs(x.t - c.parsed.x) < 43200000);
-                if (b) return `${b.price >= 1000 ? fmtGBP(b.price,0) : fmtGBP(b.price,2)} · ${fmtGBP(b.cost,0)} → ${Math.round(b.btc*1e8).toLocaleString("en-GB")} sats`;
-              }
-              return c.dataset.label + ": " + fmtGBP(c.parsed.y, 0);
-            }
-          }
-        }
-      },
-      scales: {
-        x: xScale,
-        y: {
-          ticks: {color:"#6b7280", font:{size:9}, callback: v => v >= 1000 ? "£" + (v/1000).toFixed(0) + "k" : "£" + v.toFixed(0)},
-          grid: {color:"rgba(255,255,255,0.03)"}
-        }
-      }
-    }
+  const mode = settings.monthly;
+  const s = computeStats();
+  let data, sub, yCb, label, extra = [];
+  if (mode === "sats") {
+    data = months.map(m => Math.round(m.btc * 1e8)); label = "Sats stacked"; yCb = v => fmtSatsShort(v);
+    sub = "Sats added each month — same £, more sats when price dips";
+  } else if (mode === "avg") {
+    data = months.map(m => m.btc > 0 ? m.cost / m.btc : null); label = "Avg price paid"; yCb = fmtAxisGBP;
+    sub = "Average price paid per BTC each month";
+    extra.push({type: "line", label: "Lifetime avg", data: months.map(() => s.dcaAvg), borderColor: C.btc, borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0});
+  } else {
+    data = months.map(m => m.cost); label = "£ invested"; yCb = fmtAxisGBP;
+    sub = `£ invested each month · ${fmtGBP(s.totalSpent / Math.max(1, months.length), 0)} / month average`;
+  }
+  document.getElementById("monthlySub").textContent = sub;
+
+  const opts = baseOptions({x: {type: "category", ticks: {...TICK, maxRotation: 0, autoSkip: true, maxTicksLimit: 8}, grid: {display: false}}, y: {ticks: {...TICK, callback: yCb}, beginAtZero: mode !== "avg"}, legend: extra.length > 0,
+    tooltipLabel: c => {
+      const m = months[c.dataIndex];
+      if (c.dataset.type === "line") return `Lifetime avg: ${fmtGBP(c.parsed.y, 0)}`;
+      if (mode === "sats") return `${c.parsed.y.toLocaleString("en-GB")} sats · ${m.n} buys`;
+      if (mode === "avg") return m.btc > 0 ? `${fmtGBP(c.parsed.y, 0)} avg · ${m.n} buys` : "No buys";
+      return `${fmtGBP(c.parsed.y)} · ${m.n} buys`;
+    }});
+  opts.interaction = {intersect: false, mode: "index"};
+  makeChart("monthly", "monthlyChart", {
+    type: "bar",
+    data: {labels: months.map(m => m.label), datasets: [{label, data, backgroundColor: "rgba(247,147,26,0.85)", hoverBackgroundColor: C.btc, borderRadius: 4, maxBarThickness: 18, order: 2}, ...extra]},
+    options: opts
   });
 }
 
-function toggleForm() {
-  const form = document.getElementById("addForm");
-  const btn = document.getElementById("addBtn");
-  const open = !form.classList.contains("show");
-  form.classList.toggle("show", open);
-  form.classList.remove("editing");
-  document.getElementById("formTitle").textContent = "New Purchase";
-  document.getElementById("formSaveBtn").textContent = "Save Purchase";
-  btn.style.display = open ? "none" : "block";
-  // Reset BTC field mode
-  const btcInput = document.getElementById("formBtc");
-  btcInput.dataset.manual = "false";
-  document.getElementById("btcModeTag").textContent = "AUTO";
-  document.getElementById("btcModeTag").style.color = "#f7931a";
-  if (open) {
-    editingId = null;
-    document.getElementById("formDate").value = new Date().toISOString().split("T")[0];
-    document.getElementById("formCost").value = "25";
-    document.getElementById("formPrice").value = livePrice ? livePrice.toFixed(2) : "";
-    btcInput.value = "";
-    updateAutoBtc();
-    setTimeout(() => document.getElementById("formPrice").focus(), 100);
-  } else {
-    editingId = null;
-    renderHistory();
+function renderCorridorChart() {
+  if (!projYear) return;
+  const buys = buysAsc();
+  const now = Date.now();
+  const start = Math.min(buys.length ? buys[0].t : now, now - 2 * 365 * DAY);
+  const end = new Date(projYear, 11, 31).getTime();
+  const trend = [], sup = [], res = [];
+  for (let i = 0; i <= 120; i++) {
+    const t = start + (end - start) * i / 120, v = powerLawGBP(t);
+    trend.push({x: t, y: v}); sup.push({x: t, y: v * BEAR_MULT}); res.push({x: t, y: v * BULL_MULT});
   }
-}
-
-function editPurchase(id) {
-  const p = purchases.find(x => x.id === id);
-  if (!p) return;
-  editingId = id;
-  const form = document.getElementById("addForm");
-  const btn = document.getElementById("addBtn");
-  form.classList.add("show", "editing");
-  btn.style.display = "none";
-  document.getElementById("formTitle").textContent = "Edit Purchase";
-  document.getElementById("formSaveBtn").textContent = "Save Changes";
-  document.getElementById("formDate").value = p.date;
-  document.getElementById("formCost").value = p.cost;
-  document.getElementById("formPrice").value = p.price;
-  document.getElementById("formBtc").value = p.btc.toFixed(8);
-  // Editing an existing purchase — treat BTC as manual so it's not overwritten
-  document.getElementById("formBtc").dataset.manual = "true";
-  document.getElementById("btcModeTag").textContent = "MANUAL";
-  document.getElementById("btcModeTag").style.color = "#3fb950";
-  renderHistory();
-  setTimeout(() => form.scrollIntoView({behavior:"smooth", block:"center"}), 50);
-}
-
-function updateAutoBtc() {
-  // If user has manually edited BTC, don't overwrite
-  const btcInput = document.getElementById("formBtc");
-  if (btcInput.dataset.manual === "true") return;
-  const cost = parseFloat(document.getElementById("formCost").value);
-  const price = parseFloat(document.getElementById("formPrice").value);
-  if (cost > 0 && price > 0) {
-    btcInput.value = (cost / price).toFixed(8);
-  } else {
-    btcInput.value = "";
-  }
-}
-
-function markBtcManual() {
-  const btcInput = document.getElementById("formBtc");
-  btcInput.dataset.manual = "true";
-  document.getElementById("btcModeTag").textContent = "MANUAL";
-  document.getElementById("btcModeTag").style.color = "#3fb950";
-}
-
-function savePurchase() {
-  const date = document.getElementById("formDate").value;
-  const cost = parseFloat(document.getElementById("formCost").value);
-  const price = parseFloat(document.getElementById("formPrice").value);
-  const btcRaw = parseFloat(document.getElementById("formBtc").value);
-
-  if (!date) return showToast("Please enter a date");
-  if (!cost || cost <= 0) return showToast("Please enter a valid cost");
-  if (!price || price <= 0) return showToast("Please enter a valid price");
-  if (!btcRaw || btcRaw <= 0) return showToast("Please enter a valid BTC amount");
-
-  // Use whatever's in the BTC field — auto-calculated or manually overridden
-  const btc = btcRaw;
-  if (editingId !== null) {
-    const idx = purchases.findIndex(x => x.id === editingId);
-    if (idx !== -1) {
-      purchases[idx] = {...purchases[idx], date, cost, btc, price};
-    }
-    showToast("Purchase updated");
-  } else {
-    purchases.push({id: Date.now(), date, cost, btc, price});
-    showToast("Purchase added");
-  }
-  savePurchases();
-  toggleForm();
-  render();
+  const price = getHistory().filter(h => h.t >= start).map(h => ({x: h.t, y: h.p}));
+  if (livePrice) price.push({x: now, y: livePrice});
+  const target = new Date(projYear, 5, 30).getTime();
+  const datasets = [
+    {label: "Support", data: sup, borderColor: "rgba(63,185,80,0.55)", borderWidth: 1, pointRadius: 0, fill: false},
+    {label: "Resistance", data: res, borderColor: "rgba(248,81,73,0.55)", borderWidth: 1, pointRadius: 0, fill: 0, backgroundColor: "rgba(167,139,250,0.07)"},
+    {label: "Trend", data: trend, borderColor: C.pl, borderWidth: 1.5, borderDash: [4, 4], pointRadius: 0},
+    {label: "BTC price", data: price, borderColor: "#e8e8ed", borderWidth: 1.5, pointRadius: 0},
+    {label: `${projYear} base`, data: [{x: target, y: powerLawGBP(target)}], type: "scatter", backgroundColor: C.btc, borderColor: "#101019", borderWidth: 2, pointRadius: 6, pointHoverRadius: 8}
+  ];
+  const opts = baseOptions({x: xScaleTime(start, end), y: {type: "logarithmic", grid: {color: c => c.tick?.label ? GRID.color : "transparent"}, ticks: {...TICK, autoSkip: false, callback: v => { const m = v / Math.pow(10, Math.floor(Math.log10(v))); return [1, 2, 5].includes(Math.round(m * 100) / 100) ? fmtAxisGBP(v) : ""; }}}});
+  makeChart("corridor", "corridorChart", {type: "line", data: {datasets}, options: opts});
 }
 
 // ── POWER LAW PROJECTION ─────────────────────────────
@@ -1035,21 +1737,18 @@ const BEAR_MULT = 0.42;
 const BULL_MULT = 3.0;
 
 function powerLawUSD(dateMs) {
-  const days = (dateMs - GENESIS_MS) / 86400000;
+  const days = (dateMs - GENESIS_MS) / DAY;
   if (days <= 0) return 0;
   return Math.pow(10, PL_A + PL_B * Math.log10(days));
 }
 
-function powerLawGBP(dateMs) {
-  return powerLawUSD(dateMs) * getUsdGbpRate();
-}
+function powerLawGBP(dateMs) { return powerLawUSD(dateMs) * getUsdGbpRate(); }
 
 function getUsdGbpRate() {
-  // Prefer the live-derived rate; persist it so the fallback tracks reality
-  // instead of a stale hardcoded constant.
+  // Prefer the live-derived rate; persist it so the fallback tracks reality.
   if (livePrice && liveUsdPrice) {
     const rate = livePrice / liveUsdPrice;
-    try { localStorage.setItem(RATE_CACHE_KEY, String(rate)); } catch(e) {}
+    if (rate !== getUsdGbpRate._last) { try { localStorage.setItem(RATE_CACHE_KEY, String(rate)); } catch(e) {} getUsdGbpRate._last = rate; }
     return rate;
   }
   try {
@@ -1064,117 +1763,156 @@ function initYearTabs() {
   const currentYear = new Date().getFullYear();
   const years = [currentYear + 1, currentYear + 3, currentYear + 5, currentYear + 9, currentYear + 14];
   projYear = years[2]; // default to +5yr
-  tabs.innerHTML = years.map(y =>
-    `<button class="year-tab${y === projYear ? " active" : ""}" data-year="${y}" onclick="setProjYear(${y})">${y}</button>`
-  ).join("");
+  tabs.innerHTML = years.map(y => `<button class="${y === projYear ? "active" : ""}" data-year="${y}" onclick="setProjYear(${y})">${y}</button>`).join("");
 }
 
 function setProjYear(y) {
   projYear = y;
-  document.querySelectorAll(".year-tab").forEach(t => t.classList.toggle("active", parseInt(t.dataset.year) === y));
+  document.querySelectorAll("#yearTabs button").forEach(t => t.classList.toggle("active", parseInt(t.dataset.year) === y));
   renderProjection();
+  renderCorridorChart();
 }
 
-function toggleProjInfo() {
-  document.getElementById("projInfoBox").classList.toggle("show");
-}
+function toggleProjInfo() { document.getElementById("projInfoBox").classList.toggle("show"); }
 
 function renderProjection() {
   if (!projYear) return;
   const s = computeStats();
   const targetDate = new Date(projYear, 5, 30).getTime(); // mid-year
-  const centralUsd = powerLawUSD(targetDate);
   const rate = getUsdGbpRate();
-  const centralGbp = centralUsd * rate;
+  const centralGbp = powerLawUSD(targetDate) * rate;
   const bearGbp = centralGbp * BEAR_MULT;
   const bullGbp = centralGbp * BULL_MULT;
+  const vsNow = p => livePrice ? `<small>${fmtPct((p / livePrice - 1) * 100, 0)} vs today</small>` : "";
 
-  document.getElementById("bearPrice").textContent = fmtGBP(bearGbp, 0);
-  document.getElementById("basePrice").textContent = fmtGBP(centralGbp, 0);
-  document.getElementById("bullPrice").textContent = fmtGBP(bullGbp, 0);
+  document.getElementById("bearPrice").innerHTML = fmtGBP(bearGbp, 0) + vsNow(bearGbp);
+  document.getElementById("basePrice").innerHTML = fmtGBP(centralGbp, 0) + vsNow(centralGbp);
+  document.getElementById("bullPrice").innerHTML = fmtGBP(bullGbp, 0) + vsNow(bullGbp);
 
   document.getElementById("bearStack").textContent = fmtGBP(bearGbp * s.totalBtc, 0);
   document.getElementById("baseStack").textContent = fmtGBP(centralGbp * s.totalBtc, 0);
   document.getElementById("bullStack").textContent = fmtGBP(bullGbp * s.totalBtc, 0);
 
-  // Future stack: if you keep DCA'ing weekly until projYear
+  // Future stack: if you keep DCA'ing weekly until projYear, buying at the trend price
   const weekly = parseFloat(document.getElementById("futureWeekly").value) || 0;
   const now = Date.now();
-  const weeksAhead = Math.max(0, Math.floor((targetDate - now) / (7 * 86400000)));
+  const weeksAhead = Math.max(0, Math.floor((targetDate - now) / (7 * DAY)));
   const futureInvested = weekly * weeksAhead;
-
-  // Estimate avg BTC price between now and target using power law midpoint
-  // For each week, accumulate cost / projected price. Use simple midpoint approximation.
   let futureBtc = 0;
   for (let w = 1; w <= weeksAhead; w++) {
-    const wDate = now + w * 7 * 86400000;
-    const priceGbpAtBuy = powerLawUSD(wDate) * rate;
+    const priceGbpAtBuy = powerLawUSD(now + w * 7 * DAY) * rate;
     if (priceGbpAtBuy > 0) futureBtc += weekly / priceGbpAtBuy;
   }
-
   const totalFutureBtc = s.totalBtc + futureBtc;
-  const futureStackValue = totalFutureBtc * centralGbp;
 
   document.getElementById("futureInvested").textContent = fmtGBP(futureInvested, 0);
   document.getElementById("futureBtc").textContent = "₿ " + futureBtc.toFixed(6);
-  document.getElementById("futureStack").textContent = fmtGBP(futureStackValue, 0);
+  document.getElementById("futureTotalBtc").textContent = "₿ " + totalFutureBtc.toFixed(6);
+  document.getElementById("futureRange").textContent = `${fmtCompactGBP(totalFutureBtc * bearGbp)} / ${fmtCompactGBP(totalFutureBtc * bullGbp)}`;
+  document.getElementById("futureStack").textContent = fmtGBP(totalFutureBtc * centralGbp, 0);
+}
+
+// ── ADD / EDIT FORM ─────────────────────────────
+function openAddForm() {
+  setView("history");
+  const form = document.getElementById("addForm");
+  if (!form.classList.contains("show") || editingId !== null) {
+    if (form.classList.contains("show")) toggleForm();
+    toggleForm();
+  }
+}
+
+function toggleForm() {
+  const form = document.getElementById("addForm");
+  const btn = document.getElementById("addBtn");
+  const open = !form.classList.contains("show");
+  form.classList.toggle("show", open);
+  form.classList.remove("editing");
+  document.getElementById("formTitle").textContent = "New Purchase";
+  document.getElementById("formSaveBtn").textContent = "Save Purchase";
+  btn.style.display = open ? "none" : "block";
+  const btcInput = document.getElementById("formBtc");
+  btcInput.dataset.manual = "false";
+  document.getElementById("btcModeTag").textContent = "AUTO";
+  document.getElementById("btcModeTag").style.color = "#f7931a";
+  editingId = null;
+  if (open) {
+    const last = buysAsc().pop();
+    document.getElementById("formDate").value = todayISO();
+    document.getElementById("formCost").value = last ? last.cost : settings.weekly;
+    document.getElementById("formPrice").value = livePrice ? livePrice.toFixed(2) : "";
+    btcInput.value = "";
+    updateAutoBtc();
+    setTimeout(() => { form.scrollIntoView({behavior: "smooth", block: "center"}); document.getElementById("formPrice").focus(); }, 100);
+  }
+  renderHistory();
+}
+
+function editPurchase(id) {
+  const p = purchases.find(x => x.id === id);
+  if (!p) return;
+  editingId = id;
+  const form = document.getElementById("addForm");
+  form.classList.add("show", "editing");
+  document.getElementById("addBtn").style.display = "none";
+  document.getElementById("formTitle").textContent = "Edit Purchase";
+  document.getElementById("formSaveBtn").textContent = "Save Changes";
+  document.getElementById("formDate").value = p.date;
+  document.getElementById("formCost").value = p.cost;
+  document.getElementById("formPrice").value = p.price;
+  document.getElementById("formBtc").value = p.btc.toFixed(8);
+  // Editing an existing purchase — treat BTC as manual so it's not overwritten
+  document.getElementById("formBtc").dataset.manual = "true";
+  document.getElementById("btcModeTag").textContent = "MANUAL";
+  document.getElementById("btcModeTag").style.color = "#3fb950";
+  renderHistory();
+  setTimeout(() => form.scrollIntoView({behavior: "smooth", block: "center"}), 50);
+}
+
+function updateAutoBtc() {
+  const btcInput = document.getElementById("formBtc");
+  if (btcInput.dataset.manual === "true") return;
+  const cost = parseFloat(document.getElementById("formCost").value);
+  const price = parseFloat(document.getElementById("formPrice").value);
+  btcInput.value = cost > 0 && price > 0 ? (cost / price).toFixed(8) : "";
+}
+
+function markBtcManual() {
+  document.getElementById("formBtc").dataset.manual = "true";
+  document.getElementById("btcModeTag").textContent = "MANUAL";
+  document.getElementById("btcModeTag").style.color = "#3fb950";
+}
+
+function savePurchase() {
+  const date = document.getElementById("formDate").value;
+  const cost = parseFloat(document.getElementById("formCost").value);
+  const price = parseFloat(document.getElementById("formPrice").value);
+  const btc = parseFloat(document.getElementById("formBtc").value);
+
+  if (!date) return showToast("Please enter a date");
+  if (!cost || cost <= 0) return showToast("Please enter a valid cost");
+  if (!price || price <= 0) return showToast("Please enter a valid price");
+  if (!btc || btc <= 0) return showToast("Please enter a valid BTC amount");
+
+  if (editingId !== null) {
+    const idx = purchases.findIndex(x => x.id === editingId);
+    if (idx !== -1) purchases[idx] = {...purchases[idx], date, cost, btc, price};
+    showToast("Purchase updated");
+  } else {
+    purchases.push({id: Date.now(), date, cost, btc, price});
+    showToast(`Added ${fmtSats(btc)} sats`);
+  }
+  savePurchases();
+  toggleForm();
+  render();
 }
 
 // ── CSV EXPORT ─────────────────────────────
 function exportCSV() {
-  const sorted = [...purchases].sort((a, b) => a.date.localeCompare(b.date));
   const rows = [["Date", "Cost (GBP)", "BTC Amount", "BTC Price (GBP)"]];
-  sorted.forEach(p => rows.push([p.date, p.cost.toFixed(2), p.btc.toFixed(8), p.price.toFixed(2)]));
-  const csv = rows.map(r => r.join(",")).join("\n");
-  const blob = new Blob([csv], {type: "text/csv"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `btc_purchases_${new Date().toISOString().split("T")[0]}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  buysAsc().forEach(p => rows.push([p.date, p.cost.toFixed(2), p.btc.toFixed(8), p.price.toFixed(2)]));
+  download(`btc_purchases_${todayISO()}.csv`, rows.map(r => r.join(",")).join("\n"), "text/csv");
   showToast("CSV downloaded");
-}
-
-// ── YEARLY SUMMARY ─────────────────────────────
-function renderYearly() {
-  const body = document.getElementById("yearlyBody");
-  if (purchases.length === 0) {
-    body.innerHTML = '<div class="empty">No data yet</div>';
-    return;
-  }
-  const byYear = {};
-  purchases.forEach(p => {
-    const y = p.date.slice(0, 4);
-    if (!byYear[y]) byYear[y] = {cost: 0, btc: 0, count: 0};
-    byYear[y].cost += p.cost;
-    byYear[y].btc += p.btc;
-    byYear[y].count += 1;
-  });
-  const years = Object.keys(byYear).sort((a, b) => b.localeCompare(a));
-  let html = `<div class="yearly-row header">
-    <span>Year</span>
-    <span class="yr-val">Invested</span>
-    <span class="yr-val">BTC</span>
-    <span class="yr-val">Avg £</span>
-  </div>`;
-  years.forEach(y => {
-    const d = byYear[y];
-    const avg = d.cost / d.btc;
-    html += `<div class="yearly-row">
-      <span class="yr-year">${y}</span>
-      <span class="yr-val">${fmtGBP(d.cost, 0)}<div class="yr-val sub" style="text-align:right">${d.count} buys</div></span>
-      <span class="yr-btc">${d.btc.toFixed(6)}</span>
-      <span class="yr-val">${fmtGBP(avg, 0)}</span>
-    </div>`;
-  });
-  body.innerHTML = html;
-}
-
-function toggleYearly() {
-  document.getElementById("yearlyCard").classList.toggle("open");
 }
 
 // ── CSV IMPORT ─────────────────────────────
@@ -1189,22 +1927,20 @@ function handleImport(event) {
       if (file.name.toLowerCase().endsWith(".json") || text.trim().startsWith("{")) {
         const payload = JSON.parse(text);
         const rows = Array.isArray(payload) ? payload : payload.purchases;
-        if (!Array.isArray(rows) || rows.length === 0) { showToast("No purchases in backup file"); event.target.value=""; return; }
+        if (!Array.isArray(rows) || rows.length === 0) { showToast("No purchases in backup file"); event.target.value = ""; return; }
         const clean = rows.filter(p => p.date && p.cost > 0 && p.btc > 0 && p.price > 0);
         if (confirm(`Restore ${clean.length} purchases from this backup file? Replaces your current list (which is backed up).`)) {
-          purchases = clean.map((p, i) => ({date:p.date, cost:+p.cost, btc:+p.btc, price:+p.price, id: Date.now() + i}));
+          purchases = clean.map((p, i) => ({date: p.date, cost: +p.cost, btc: +p.btc, price: +p.price, id: Date.now() + i}));
           savePurchases(true);
           render();
+          loadHistory();
           showToast(`Restored ${clean.length} purchases`);
         }
         event.target.value = "";
         return;
       }
       const parsed = parseImportedCSV(text);
-      if (parsed.length === 0) {
-        showToast("No valid rows found in CSV");
-        return;
-      }
+      if (parsed.length === 0) { showToast("No valid rows found in CSV"); return; }
       // Merge is safer than replace: offer it first, fall back to replace.
       // A row counts as a duplicate if same date + same BTC amount (to 8dp).
       const key = p => `${p.date}|${p.btc.toFixed(8)}`;
@@ -1217,15 +1953,17 @@ function handleImport(event) {
         `• Cancel = choose Replace instead`;
 
       if (confirm(mergeMsg)) {
-        if (fresh.length === 0) { showToast("Nothing new to add"); event.target.value=""; return; }
+        if (fresh.length === 0) { showToast("Nothing new to add"); event.target.value = ""; return; }
         purchases = [...purchases, ...fresh.map((p, i) => ({...p, id: Date.now() + i}))];
         savePurchases(true);
         render();
+        loadHistory();
         showToast(`Merged ${fresh.length} new purchases`);
       } else if (confirm(`Replace ALL ${purchases.length} purchases with the ${parsed.length} imported? Your current list is backed up and restorable.`)) {
         purchases = parsed.map((p, i) => ({...p, id: Date.now() + i}));
         savePurchases(true);
         render();
+        loadHistory();
         showToast(`Replaced with ${parsed.length} purchases`);
       }
     } catch(err) {
@@ -1255,9 +1993,7 @@ function parseImportedCSV(text) {
   const lines = text.split(/\r?\n/).filter(l => l.trim());
   if (lines.length === 0) return [];
 
-  // Fast path: our own export format, identified by its header.
-  // Columns are read by name, not by guessing from magnitude — robust even if
-  // a buy's cost ever exceeds the BTC price, or amounts look unusual.
+  // Fast path: our own export format, identified by its header — columns read by name.
   const header = splitCsvLine(lines[0]).map(h => h.toLowerCase());
   const di = header.findIndex(h => h.startsWith("date"));
   const ci = header.findIndex(h => h.includes("cost"));
@@ -1280,35 +2016,19 @@ function parseImportedCSV(text) {
   // (£ symbols, commas, dd/mm/yyyy dates, unknown column order).
   const out = [];
   for (const line of lines) {
-    // Split respecting quotes
-    const cells = [];
-    let cur = "", inQ = false;
-    for (const ch of line) {
-      if (ch === '"') inQ = !inQ;
-      else if (ch === "," && !inQ) { cells.push(cur); cur = ""; }
-      else cur += ch;
-    }
-    cells.push(cur);
-    // Skip header rows and obviously non-data rows
-    const cleaned = cells.map(c => c.trim());
-    // Try to find a row with: something looking like a date, then 3 numbers
+    const cleaned = splitCsvLine(line);
+    // Find a cell that looks like a date, then 3 numbers after it
     let dateIdx = -1;
     for (let i = 0; i < cleaned.length; i++) {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned[i]) || /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(cleaned[i])) {
-        dateIdx = i;
-        break;
-      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned[i]) || /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(cleaned[i])) { dateIdx = i; break; }
     }
     if (dateIdx === -1) continue;
-    // Parse remaining numeric fields, stripping £, commas
     const nums = [];
     for (let i = dateIdx + 1; i < cleaned.length && nums.length < 3; i++) {
-      const raw = cleaned[i].replace(/[£$,\s]/g, "");
-      const n = parseFloat(raw);
+      const n = num(cleaned[i]);
       if (!isNaN(n) && n > 0) nums.push(n);
     }
     if (nums.length < 3) continue;
-    // Normalise date
     let date = cleaned[dateIdx];
     if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(date)) {
       const parts = date.split(/[\/\-]/);
@@ -1316,33 +2036,70 @@ function parseImportedCSV(text) {
       if (yr.length === 2) yr = "20" + yr;
       date = `${yr}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
     }
-    // Use magnitude to identify: BTC amount is always the smallest (< 1),
-    // BTC price is always the largest (> 1000), cost is what's left
+    // By magnitude: BTC amount is the smallest (< 1), BTC price the largest, cost what's left
     const sorted3 = [...nums].sort((a, b) => a - b);
-    const btc = sorted3[0];
-    const price = sorted3[2];
-    const cost = sorted3[1];
+    const btc = sorted3[0], cost = sorted3[1], price = sorted3[2];
     if (btc >= 1 || price < 100 || cost <= 0) continue;
     out.push({date, cost, btc, price});
   }
   return out;
 }
 
-// Init
+// ── NAV / PRIVACY ─────────────────────────────
+function setView(v) {
+  settings.view = v; saveSettings();
+  document.querySelectorAll(".view").forEach(el => el.classList.toggle("active", el.id === "view-" + v));
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.view === v));
+  window.scrollTo({top: 0});
+  renderActiveCharts();
+  if (v === "market") { loadFng(); loadNetwork(); }
+}
+
+function togglePrivacy() {
+  settings.privacy = !settings.privacy; saveSettings();
+  applyPrivacy();
+  showToast(settings.privacy ? "Amounts hidden" : "Amounts visible");
+}
+
+function applyPrivacy() {
+  document.body.classList.toggle("private", settings.privacy);
+  document.getElementById("privacyBtn").classList.toggle("on", settings.privacy);
+}
+
+// ── INIT ─────────────────────────────
 document.getElementById("formCost").addEventListener("input", updateAutoBtc);
 document.getElementById("formPrice").addEventListener("input", updateAutoBtc);
 document.getElementById("formBtc").addEventListener("input", markBtcManual);
-document.getElementById("futureWeekly").addEventListener("input", renderProjection);
+document.getElementById("futureWeekly").addEventListener("input", e => {
+  const v = parseFloat(e.target.value);
+  if (v >= 0) { settings.weekly = v; saveSettings(); }
+  renderProjection();
+});
+document.getElementById("histSort").addEventListener("change", e => { settings.sort = e.target.value; saveSettings(); renderHistory(); });
+document.querySelectorAll("#chartSeg button").forEach(b => b.addEventListener("click", () => { settings.chart = b.dataset.chart; saveSettings(); renderMainChart(); }));
+document.querySelectorAll("#rangeSeg button").forEach(b => b.addEventListener("click", () => { settings.range = b.dataset.range === "all" ? "all" : +b.dataset.range; saveSettings(); renderMainChart(); }));
+document.querySelectorAll("#monthlySeg button").forEach(b => b.addEventListener("click", () => { settings.monthly = b.dataset.m; saveSettings(); renderMonthlyChart(); }));
 
+loadSettings();
+document.getElementById("futureWeekly").value = settings.weekly;
+applyPrivacy();
 initYearTabs();
 loadPurchases();
+{ const pc = lsGet(PRICE_CACHE_KEY); if (pc?.price) { livePrice = pc.price; liveUsdPrice = pc.usd || null; market = pc.market || null; setUpdatedLabel(pc.ts); } }
+{ const hc = lsGet(HISTORY_KEY); if (hc?.data?.length) priceHistory = hc.data; }
+setView(settings.view);
 render();
 fetchPrice();
 loadHistory();
+loadFng();
+loadNetwork();
 
 // Auto-refresh price every 5 mins when visible
 setInterval(() => {
-  if (document.visibilityState === "visible") fetchPrice();
+  if (document.visibilityState === "visible") {
+    fetchPrice();
+    if (settings.view === "market") loadNetwork();
+  }
 }, 5 * 60 * 1000);
 
 document.addEventListener("visibilitychange", () => {
