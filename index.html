@@ -561,12 +561,15 @@
 <input type="file" id="csvImport" accept=".csv,.json,text/csv,application/json" class="file-input-hidden" onchange="handleImport(event)">
 
 <script>
+// Restored from btc_backup_2026-09-25.json. Bump SEED_VERSION whenever this list
+// changes so devices with saved data pick up any buys they are missing.
+const SEED_VERSION = 2;
 const SEED_DATA = [
   {date:"2025-01-15",cost:495,btc:0.00749828,price:81180.97},
   {date:"2025-01-22",cost:25,btc:0.00031074,price:79519.86},
   {date:"2025-01-29",cost:25,btc:0.00029601,price:83476.91},
   {date:"2025-02-05",cost:741.18,btc:0.00867831,price:85406.03},
-  {date:"2025-02-12",cost:25,btc:0.00030274,price:81522.10},
+  {date:"2025-02-12",cost:25,btc:0.00030274,price:81522.1},
   {date:"2025-02-19",cost:25,btc:0.00031021,price:76305.24},
   {date:"2025-02-26",cost:25,btc:0.00030372,price:78110.73},
   {date:"2025-03-05",cost:25,btc:0.00030332,price:76662.79},
@@ -576,7 +579,7 @@ const SEED_DATA = [
   {date:"2025-04-02",cost:25,btc:0.00038561,price:64002.69},
   {date:"2025-04-09",cost:25,btc:0.00037178,price:66383.34},
   {date:"2025-04-16",cost:25,btc:0.00036486,price:67669.79},
-  {date:"2025-04-23",cost:25,btc:0.00038622,price:63901.40},
+  {date:"2025-04-23",cost:25,btc:0.00038622,price:63901.4},
   {date:"2025-04-30",cost:25,btc:0.00038853,price:63521.48},
   {date:"2025-05-07",cost:25,btc:0.00038636,price:63878.25},
   {date:"2025-05-14",cost:25,btc:0.00035263,price:69988.37},
@@ -598,7 +601,7 @@ const SEED_DATA = [
   {date:"2025-09-03",cost:25,btc:0.00028444,price:86766.98},
   {date:"2025-09-10",cost:25,btc:0.00027512,price:89706.31},
   {date:"2025-09-17",cost:25,btc:0.00029344,price:84105.78},
-  {date:"2025-09-24",cost:25,btc:0.00029509,price:83635.50},
+  {date:"2025-09-24",cost:25,btc:0.00029509,price:83635.5},
   {date:"2025-10-01",cost:25,btc:0.00029904,price:82530.77},
   {date:"2025-10-08",cost:25,btc:0.00029223,price:84454.03},
   {date:"2025-10-15",cost:25,btc:0.00028568,price:86390.37},
@@ -607,14 +610,14 @@ const SEED_DATA = [
   {date:"2025-11-05",cost:25,btc:0.00027128,price:90976.11},
   {date:"2025-11-12",cost:25,btc:0.00029768,price:82907.27},
   {date:"2025-11-19",cost:25,btc:0.00030248,price:81592.17},
-  {date:"2025-11-26",cost:25,btc:0.00029238,price:84410.70},
+  {date:"2025-11-26",cost:25,btc:0.00029238,price:84410.7},
   {date:"2025-12-03",cost:25,btc:0.00031220,price:79051.89},
   {date:"2025-12-10",cost:25,btc:0.00031379,price:78651.33},
   {date:"2025-12-17",cost:25,btc:0.00034757,price:71007.28},
   {date:"2025-12-24",cost:25,btc:0.00035846,price:68850.08},
   {date:"2025-12-31",cost:25,btc:0.00035424,price:69670.28},
   {date:"2026-01-07",cost:25,btc:0.00036551,price:67522.09},
-  {date:"2026-01-14",cost:25,btc:0.00038099,price:64778.60},
+  {date:"2026-01-14",cost:25,btc:0.00038099,price:64778.6},
   {date:"2026-01-21",cost:25,btc:0.00038082,price:64807.52},
   {date:"2026-01-28",cost:25,btc:0.00036865,price:66946.97},
   {date:"2026-02-04",cost:25,btc:0.00034380,price:71785.92},
@@ -640,6 +643,13 @@ const SEED_DATA = [
   {date:"2026-07-02",cost:25,btc:0.00054707,price:45296.69},
   {date:"2026-07-09",cost:25,btc:0.00052989,price:46764.42},
   {date:"2026-08-06",cost:50,btc:0.00103393,price:47934.54},
+  {date:"2026-08-20",cost:25.16,btc:0.00048804,price:51103.42},
+  {date:"2026-08-27",cost:25,btc:0.00042315,price:58560.79},
+  {date:"2026-09-03",cost:25,btc:0.00042991,price:57645.33},
+  {date:"2026-09-11",cost:25,btc:0.00042842,price:57840.44},
+  {date:"2026-09-18",cost:25,btc:0.00043432,price:57054.71},
+  {date:"2026-09-18",cost:24,btc:0.00050496,price:47112.64},
+  {date:"2026-09-24",cost:25,btc:0.00038963,price:63600.43},
 ];
 
 const STORAGE_KEY = "btc_stack_purchases_v1";
@@ -682,6 +692,7 @@ function loadPurchases() {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       purchases = JSON.parse(stored);
+      mergeSeed();
     } else {
       purchases = SEED_DATA.map((p, i) => ({...p, id: Date.now() + i}));
       savePurchases();
@@ -689,6 +700,22 @@ function loadPurchases() {
   } catch(e) {
     purchases = SEED_DATA.map((p, i) => ({...p, id: Date.now() + i}));
   }
+}
+
+// Once per SEED_VERSION, add any built-in buys this device doesn't have yet
+// (matched on date + BTC amount), so saved data is topped up, never overwritten.
+function mergeSeed() {
+  const SEED_VERSION_KEY = "btc_stack_seed_version";
+  if ((+localStorage.getItem(SEED_VERSION_KEY) || 1) >= SEED_VERSION) return;
+  const key = p => `${p.date}|${(+p.btc).toFixed(8)}`;
+  const have = new Set(purchases.map(key));
+  const missing = SEED_DATA.filter(p => !have.has(key(p)));
+  if (missing.length) {
+    purchases = [...purchases, ...missing.map((p, i) => ({...p, id: Date.now() + i}))];
+    savePurchases(true); // snapshot first, so Restore can undo the top-up
+    setTimeout(() => showToast(`Added ${missing.length} missing purchase${missing.length > 1 ? "s" : ""}`), 600);
+  }
+  localStorage.setItem(SEED_VERSION_KEY, String(SEED_VERSION));
 }
 
 function savePurchases(snapshotFirst = false) {
